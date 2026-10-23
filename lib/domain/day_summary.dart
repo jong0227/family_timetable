@@ -89,14 +89,7 @@ DaySummary buildDaySummary({
         state = NowState.done;
       }
     }
-    days.add(ChildDay(
-      child: child,
-      versionName: v?.name,
-      blocks: blocks,
-      gaps: gaps,
-      focus: focus,
-      state: state,
-    ));
+    days.add(ChildDay(child: child, versionName: v?.name, blocks: blocks, gaps: gaps, focus: focus, state: state));
   }
   return DaySummary(weekday, days);
 }

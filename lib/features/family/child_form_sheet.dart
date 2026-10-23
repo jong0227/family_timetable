@@ -9,10 +9,10 @@ import '../../domain/timetable_logic.dart';
 /// 자녀 추가/수정 시트. [child]가 null이면 추가.
 /// 추가하면 첫 시간표 버전(학기 이름 자동 추천)도 같이 만들어진다.
 Future<void> showChildFormSheet(BuildContext context, {Child? child}) => showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ChildFormSheet(child: child),
-    );
+  context: context,
+  isScrollControlled: true,
+  builder: (_) => _ChildFormSheet(child: child),
+);
 
 class _ChildFormSheet extends ConsumerStatefulWidget {
   final Child? child;
@@ -41,9 +41,7 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
   Widget build(BuildContext context) {
     final p = context.palette;
     final siblings = ref.watch(childrenProvider).valueOrNull ?? const <Child>[];
-    final color = _color ??
-        widget.child?.colorIndex ??
-        p.nextFreeColor(siblings.map((c) => c.colorIndex));
+    final color = _color ?? widget.child?.colorIndex ?? p.nextFreeColor(siblings.map((c) => c.colorIndex));
     final editing = widget.child != null;
 
     return Padding(
@@ -52,10 +50,15 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(editing ? '아이 정보' : '아이 추가',
-                style: const TextStyle(fontSize: AppText.heading, fontWeight: FontWeight.w700)),
+            Text(
+              editing ? '아이 정보' : '아이 추가',
+              style: const TextStyle(fontSize: AppText.heading, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: AppGap.lg),
-            TextField(controller: _name, decoration: const InputDecoration(labelText: '이름 또는 호칭 (예: 첫째)')),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(labelText: '이름 또는 호칭 (예: 첫째)'),
+            ),
             const SizedBox(height: AppGap.lg),
             _label('다니는 곳'),
             PillTabs<Institution>(
@@ -76,7 +79,10 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
                 onChanged: (g) => setState(() => _grade = g),
               ),
               const SizedBox(height: AppGap.lg),
-              TextField(controller: _school, decoration: const InputDecoration(labelText: '학교 이름 (선택)')),
+              TextField(
+                controller: _school,
+                decoration: const InputDecoration(labelText: '학교 이름 (선택)'),
+              ),
             ],
             const SizedBox(height: AppGap.lg),
             _label('색'),
@@ -93,10 +99,7 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(colors: p.childTones[i].gradient),
-                        border: Border.all(
-                          color: i == color ? p.childTones[i].accent : Colors.transparent,
-                          width: 3,
-                        ),
+                        border: Border.all(color: i == color ? p.childTones[i].accent : Colors.transparent, width: 3),
                       ),
                     ),
                   ),
@@ -117,10 +120,12 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
   }
 
   Widget _label(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: AppGap.sm),
-        child: Text(t,
-            style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: context.palette.textMuted)),
-      );
+    padding: const EdgeInsets.only(bottom: AppGap.sm),
+    child: Text(
+      t,
+      style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: context.palette.textMuted),
+    ),
+  );
 
   Future<void> _save(int color, List<Child> siblings) async {
     final name = _name.text.trim();
@@ -149,13 +154,15 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
         firstVersionName: suggestVersionName(draft, DateTime.now()),
       );
     } else {
-      await repo.saveChild(existing.copyWith(
-        name: name,
-        institution: _inst,
-        grade: grade,
-        schoolName: _school.text.trim(),
-        colorIndex: color,
-      ));
+      await repo.saveChild(
+        existing.copyWith(
+          name: name,
+          institution: _inst,
+          grade: grade,
+          schoolName: _school.text.trim(),
+          colorIndex: color,
+        ),
+      );
     }
     if (mounted) Navigator.pop(context);
   }

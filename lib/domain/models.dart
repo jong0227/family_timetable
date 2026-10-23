@@ -47,8 +47,7 @@ enum EntryKind {
   final String emoji;
   const EntryKind(this.label, this.emoji);
 
-  static EntryKind parse(String? s) =>
-      EntryKind.values.firstWhere((e) => e.name == s, orElse: () => EntryKind.etc);
+  static EntryKind parse(String? s) => EntryKind.values.firstWhere((e) => e.name == s, orElse: () => EntryKind.etc);
 }
 
 const kWeekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
@@ -59,8 +58,9 @@ String weekdayLabel(int weekday) => kWeekdayLabels[(weekday - 1) % 7];
 /// 580 → "9:40"
 String formatMinutes(int m) => '${m ~/ 60}:${(m % 60).toString().padLeft(2, '0')}';
 
-DateTime _parseDate(dynamic v) =>
-    v is String ? (DateTime.tryParse(v) ?? DateTime.fromMillisecondsSinceEpoch(0)) : DateTime.fromMillisecondsSinceEpoch(0);
+DateTime _parseDate(dynamic v) => v is String
+    ? (DateTime.tryParse(v) ?? DateTime.fromMillisecondsSinceEpoch(0))
+    : DateTime.fromMillisecondsSinceEpoch(0);
 
 int _int(dynamic v, [int fallback = 0]) => v is int ? v : (v is num ? v.toInt() : fallback);
 
@@ -74,39 +74,33 @@ class Member {
   final String? childId;
   final DateTime updatedAt;
 
-  const Member({
-    required this.id,
-    required this.name,
-    required this.role,
-    this.childId,
-    required this.updatedAt,
-  });
+  const Member({required this.id, required this.name, required this.role, this.childId, required this.updatedAt});
 
   bool get isParent => role == MemberRole.parent;
 
   Member copyWith({String? name, MemberRole? role, String? childId, bool clearChild = false}) => Member(
-        id: id,
-        name: name ?? this.name,
-        role: role ?? this.role,
-        childId: clearChild ? null : (childId ?? this.childId),
-        updatedAt: DateTime.now(),
-      );
+    id: id,
+    name: name ?? this.name,
+    role: role ?? this.role,
+    childId: clearChild ? null : (childId ?? this.childId),
+    updatedAt: DateTime.now(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'role': role.name,
-        'childId': childId,
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'role': role.name,
+    'childId': childId,
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   factory Member.fromJson(Map<String, dynamic> j) => Member(
-        id: j['id'] as String,
-        name: (j['name'] as String?) ?? '',
-        role: MemberRole.parse(j['role'] as String?),
-        childId: j['childId'] as String?,
-        updatedAt: _parseDate(j['updatedAt']),
-      );
+    id: j['id'] as String,
+    name: (j['name'] as String?) ?? '',
+    role: MemberRole.parse(j['role'] as String?),
+    childId: j['childId'] as String?,
+    updatedAt: _parseDate(j['updatedAt']),
+  );
 }
 
 /// 자녀 프로필. 계정이 아니라 "프로필"이라 폰이 없는 아이(어린이집 둘째)도
@@ -152,19 +146,18 @@ class Child {
     String? currentVersionId,
     bool clearCurrentVersion = false,
     bool? deleted,
-  }) =>
-      Child(
-        id: id,
-        name: name ?? this.name,
-        colorIndex: colorIndex ?? this.colorIndex,
-        institution: institution ?? this.institution,
-        grade: grade ?? this.grade,
-        schoolName: schoolName ?? this.schoolName,
-        order: order ?? this.order,
-        currentVersionId: clearCurrentVersion ? null : (currentVersionId ?? this.currentVersionId),
-        deleted: deleted ?? this.deleted,
-        updatedAt: DateTime.now(),
-      );
+  }) => Child(
+    id: id,
+    name: name ?? this.name,
+    colorIndex: colorIndex ?? this.colorIndex,
+    institution: institution ?? this.institution,
+    grade: grade ?? this.grade,
+    schoolName: schoolName ?? this.schoolName,
+    order: order ?? this.order,
+    currentVersionId: clearCurrentVersion ? null : (currentVersionId ?? this.currentVersionId),
+    deleted: deleted ?? this.deleted,
+    updatedAt: DateTime.now(),
+  );
 
   /// "초등학교 2학년" / "어린이집"
   String get institutionText {
@@ -173,30 +166,30 @@ class Child {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'colorIndex': colorIndex,
-        'institution': institution.name,
-        'grade': grade,
-        'schoolName': schoolName,
-        'order': order,
-        'currentVersionId': currentVersionId,
-        'deleted': deleted,
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'colorIndex': colorIndex,
+    'institution': institution.name,
+    'grade': grade,
+    'schoolName': schoolName,
+    'order': order,
+    'currentVersionId': currentVersionId,
+    'deleted': deleted,
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   factory Child.fromJson(Map<String, dynamic> j) => Child(
-        id: j['id'] as String,
-        name: (j['name'] as String?) ?? '',
-        colorIndex: _int(j['colorIndex']),
-        institution: Institution.parse(j['institution'] as String?),
-        grade: _int(j['grade']),
-        schoolName: (j['schoolName'] as String?) ?? '',
-        order: _int(j['order']),
-        currentVersionId: j['currentVersionId'] as String?,
-        deleted: j['deleted'] == true,
-        updatedAt: _parseDate(j['updatedAt']),
-      );
+    id: j['id'] as String,
+    name: (j['name'] as String?) ?? '',
+    colorIndex: _int(j['colorIndex']),
+    institution: Institution.parse(j['institution'] as String?),
+    grade: _int(j['grade']),
+    schoolName: (j['schoolName'] as String?) ?? '',
+    order: _int(j['order']),
+    currentVersionId: j['currentVersionId'] as String?,
+    deleted: j['deleted'] == true,
+    updatedAt: _parseDate(j['updatedAt']),
+  );
 }
 
 /// 시간표 한 칸. 요일 하나, 시간 하나.
@@ -246,47 +239,46 @@ class Entry {
     String? pickupMemberId,
     bool clearPickup = false,
     String? id,
-  }) =>
-      Entry(
-        id: id ?? this.id,
-        weekday: weekday ?? this.weekday,
-        start: start ?? this.start,
-        end: end ?? this.end,
-        title: title ?? this.title,
-        kind: kind ?? this.kind,
-        period: clearPeriod ? null : (period ?? this.period),
-        place: place ?? this.place,
-        memo: memo ?? this.memo,
-        pickupMemberId: clearPickup ? null : (pickupMemberId ?? this.pickupMemberId),
-      );
+  }) => Entry(
+    id: id ?? this.id,
+    weekday: weekday ?? this.weekday,
+    start: start ?? this.start,
+    end: end ?? this.end,
+    title: title ?? this.title,
+    kind: kind ?? this.kind,
+    period: clearPeriod ? null : (period ?? this.period),
+    place: place ?? this.place,
+    memo: memo ?? this.memo,
+    pickupMemberId: clearPickup ? null : (pickupMemberId ?? this.pickupMemberId),
+  );
 
   String get timeText => '${formatMinutes(start)}~${formatMinutes(end)}';
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'weekday': weekday,
-        'start': start,
-        'end': end,
-        'title': title,
-        'kind': kind.name,
-        'period': period,
-        'place': place,
-        'memo': memo,
-        'pickupMemberId': pickupMemberId,
-      };
+    'id': id,
+    'weekday': weekday,
+    'start': start,
+    'end': end,
+    'title': title,
+    'kind': kind.name,
+    'period': period,
+    'place': place,
+    'memo': memo,
+    'pickupMemberId': pickupMemberId,
+  };
 
   factory Entry.fromJson(Map<String, dynamic> j) => Entry(
-        id: j['id'] as String,
-        weekday: _int(j['weekday'], 1),
-        start: _int(j['start']),
-        end: _int(j['end']),
-        title: (j['title'] as String?) ?? '',
-        kind: EntryKind.parse(j['kind'] as String?),
-        period: j['period'] == null ? null : _int(j['period']),
-        place: (j['place'] as String?) ?? '',
-        memo: (j['memo'] as String?) ?? '',
-        pickupMemberId: j['pickupMemberId'] as String?,
-      );
+    id: j['id'] as String,
+    weekday: _int(j['weekday'], 1),
+    start: _int(j['start']),
+    end: _int(j['end']),
+    title: (j['title'] as String?) ?? '',
+    kind: EntryKind.parse(j['kind'] as String?),
+    period: j['period'] == null ? null : _int(j['period']),
+    place: (j['place'] as String?) ?? '',
+    memo: (j['memo'] as String?) ?? '',
+    pickupMemberId: j['pickupMemberId'] as String?,
+  );
 }
 
 /// 이름 붙은 시간표 한 벌. "2학년 1학기", "2학년 여름방학"처럼 학기마다 하나씩 만들고,
@@ -311,37 +303,37 @@ class TimetableVersion {
   });
 
   TimetableVersion copyWith({String? name, List<Entry>? entries, bool? deleted}) => TimetableVersion(
-        id: id,
-        childId: childId,
-        name: name ?? this.name,
-        entries: entries ?? this.entries,
-        deleted: deleted ?? this.deleted,
-        createdAt: createdAt,
-        updatedAt: DateTime.now(),
-      );
+    id: id,
+    childId: childId,
+    name: name ?? this.name,
+    entries: entries ?? this.entries,
+    deleted: deleted ?? this.deleted,
+    createdAt: createdAt,
+    updatedAt: DateTime.now(),
+  );
 
   List<Entry> entriesOn(int weekday) =>
       entries.where((e) => e.weekday == weekday).toList()..sort((a, b) => a.start.compareTo(b.start));
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'childId': childId,
-        'name': name,
-        'entries': entries.map((e) => e.toJson()).toList(),
-        'deleted': deleted,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'childId': childId,
+    'name': name,
+    'entries': entries.map((e) => e.toJson()).toList(),
+    'deleted': deleted,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   factory TimetableVersion.fromJson(Map<String, dynamic> j) => TimetableVersion(
-        id: j['id'] as String,
-        childId: (j['childId'] as String?) ?? '',
-        name: (j['name'] as String?) ?? '',
-        entries: entriesFromJson(j['entries']),
-        deleted: j['deleted'] == true,
-        createdAt: _parseDate(j['createdAt']),
-        updatedAt: _parseDate(j['updatedAt']),
-      );
+    id: j['id'] as String,
+    childId: (j['childId'] as String?) ?? '',
+    name: (j['name'] as String?) ?? '',
+    entries: entriesFromJson(j['entries']),
+    deleted: j['deleted'] == true,
+    createdAt: _parseDate(j['createdAt']),
+    updatedAt: _parseDate(j['updatedAt']),
+  );
 }
 
 /// 버전 안의 수정 기록. 시간표를 고칠 때마다 "고친 뒤 상태"를 통째로 한 장 찍어 둔다.
@@ -367,24 +359,24 @@ class Revision {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'versionId': versionId,
-        'childId': childId,
-        'entries': entries.map((e) => e.toJson()).toList(),
-        'summary': summary,
-        'by': by,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'versionId': versionId,
+    'childId': childId,
+    'entries': entries.map((e) => e.toJson()).toList(),
+    'summary': summary,
+    'by': by,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory Revision.fromJson(Map<String, dynamic> j) => Revision(
-        id: j['id'] as String,
-        versionId: (j['versionId'] as String?) ?? '',
-        childId: (j['childId'] as String?) ?? '',
-        entries: entriesFromJson(j['entries']),
-        summary: (j['summary'] as String?) ?? '',
-        by: (j['by'] as String?) ?? '',
-        createdAt: _parseDate(j['createdAt']),
-      );
+    id: j['id'] as String,
+    versionId: (j['versionId'] as String?) ?? '',
+    childId: (j['childId'] as String?) ?? '',
+    entries: entriesFromJson(j['entries']),
+    summary: (j['summary'] as String?) ?? '',
+    by: (j['by'] as String?) ?? '',
+    createdAt: _parseDate(j['createdAt']),
+  );
 }
 
 List<Entry> entriesFromJson(dynamic raw) {

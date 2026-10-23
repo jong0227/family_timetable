@@ -30,7 +30,9 @@ class FloatingDock extends StatelessWidget {
           decoration: BoxDecoration(
             color: p.dock,
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 8))],
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 8)),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -76,8 +78,10 @@ class _DockButton extends StatelessWidget {
               Icon(item.icon, size: 20, color: selected ? p.dock : p.onDock.withValues(alpha: 0.7)),
               if (selected) ...[
                 const SizedBox(width: AppGap.snug),
-                Text(item.label,
-                    style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: p.dock)),
+                Text(
+                  item.label,
+                  style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: p.dock),
+                ),
               ],
             ],
           ),
@@ -121,7 +125,10 @@ class PillTabs<T> extends StatelessWidget {
                     children: [
                       if (dot != null) ...[
                         Container(
-                            width: 8, height: 8, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+                        ),
                         const SizedBox(width: AppGap.snug),
                       ],
                       Text(

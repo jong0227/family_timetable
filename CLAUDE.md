@@ -6,7 +6,9 @@
 대상 기기: 갤럭시 Z 폴드 / 플립 (안드로이드). 자매 앱: `C:\dev\son_allowance_app` (Moneycraft).
 
 ## 📍 현재 상태 / 다음 할 일 (이어받기용)
-- **M0 기반 완료 (2026-10-23)**. 다음은 **M1 시간표 입력과 버전 관리** → `docs/ROADMAP.md`
+- **M0 기반, M1 시간표 입력·학기·수정 기록 완료 (2026-10-23)**. 다음은 **M2 가족 운영**(픽업 담당·알림) → `docs/ROADMAP.md`
+- 저장소: https://github.com/jong0227/family_timetable (private). M1은 브랜치 `m1-timetable-editing`
+- 디자인 미리보기: `tool/preview_web.bat` → 브라우저 localhost:5173 (웹은 메모리 저장, 새로고침하면 초기화). 디버그 빌드 빈 화면의 "개발용: 샘플 가족 채우기"로 데이터 채우기
 - Firebase 콘솔에 `com.family.timetable` 앱 등록 + `android/app/google-services.json` 아직 안 함
   → 그 전까지는 로컬 모드로만 동작. 절차: `docs/FIREBASE_SETUP.md`
 - 실기기(플립·폴드) 확인 아직 못 함.

@@ -68,9 +68,7 @@ class FamilyMeta {
 /// [file]이 null이면 메모리에만 둔다(테스트용).
 class LocalFamilyStore implements FamilyStore {
   final File? file;
-  final Map<String, Map<String, Map<String, dynamic>>> _data = {
-    for (final c in Collections.all) c: {},
-  };
+  final Map<String, Map<String, Map<String, dynamic>>> _data = {for (final c in Collections.all) c: {}};
   final _controllers = <String, StreamController<Map<String, Map<String, dynamic>>>>{};
   Map<String, dynamic>? _meta;
 
@@ -104,8 +102,8 @@ class LocalFamilyStore implements FamilyStore {
 
   /// 모든 컬렉션을 한 번에(가족 공유를 시작할 때 Firestore로 올리는 용도).
   Map<String, Map<String, Map<String, dynamic>>> snapshotAll() => {
-        for (final c in Collections.all) c: Map.of(_data[c]!),
-      };
+    for (final c in Collections.all) c: Map.of(_data[c]!),
+  };
 
   bool get isEmpty => _data.values.every((c) => c.isEmpty);
 

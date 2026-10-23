@@ -18,8 +18,12 @@ class PageBody extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
         child: ListView(
-          padding: EdgeInsets.fromLTRB(AppGap.page, MediaQuery.paddingOf(context).top + AppGap.md, AppGap.page,
-              kDockClearance),
+          padding: EdgeInsets.fromLTRB(
+            AppGap.page,
+            MediaQuery.paddingOf(context).top + AppGap.md,
+            AppGap.page,
+            kDockClearance,
+          ),
           children: children,
         ),
       ),
@@ -62,11 +66,16 @@ class PageHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (actions.isNotEmpty) Row(children: actions),
-                Text(title,
-                    style: const TextStyle(fontSize: AppText.display, fontWeight: FontWeight.w300, height: 1.15)),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: AppText.display, fontWeight: FontWeight.w300, height: 1.15),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: AppGap.xs),
-                  Text(subtitle!, style: TextStyle(fontSize: AppText.body, color: p.textMuted)),
+                  Text(
+                    subtitle!,
+                    style: TextStyle(fontSize: AppText.body, color: p.textMuted),
+                  ),
                 ],
               ],
             ),
@@ -76,8 +85,14 @@ class PageHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (asideTop != null)
-                  Text(asideTop!, style: TextStyle(fontSize: AppText.caption, color: p.textMuted)),
-                Text(asideMain!, style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700)),
+                  Text(
+                    asideTop!,
+                    style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
+                  ),
+                Text(
+                  asideMain!,
+                  style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
+                ),
               ],
             ),
         ],
@@ -112,15 +127,15 @@ class KpiRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(k.label, style: TextStyle(fontSize: AppText.caption, color: p.textMuted)),
+                  Text(
+                    k.label,
+                    style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
+                  ),
                   const SizedBox(height: AppGap.xs),
                   Row(
                     children: [
                       Text(k.value, style: AppFonts.numeric(size: AppText.kpi)),
-                      if (k.dot != null) ...[
-                        const SizedBox(width: AppGap.snug),
-                        StatusDot(k.dot!),
-                      ],
+                      if (k.dot != null) ...[const SizedBox(width: AppGap.snug), StatusDot(k.dot!)],
                     ],
                   ),
                 ],
@@ -143,10 +158,7 @@ class DashboardGrid extends StatelessWidget {
     if (cols == 1) {
       return Column(
         children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(height: AppGap.md),
-            children[i],
-          ],
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(height: AppGap.md), children[i]],
         ],
       );
     }
@@ -182,6 +194,9 @@ class StatusDot extends StatelessWidget {
   const StatusDot(this.color, {super.key, this.size = 8});
 
   @override
-  Widget build(BuildContext context) =>
-      Container(width: size, height: size, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }

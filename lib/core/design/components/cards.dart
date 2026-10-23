@@ -41,18 +41,20 @@ class DashCard extends StatelessWidget {
               if (title != null) ...[
                 Row(
                   children: [
-                    if (icon != null) ...[
-                      Icon(icon, size: 16, color: p.textMuted),
-                      const SizedBox(width: AppGap.snug),
-                    ],
+                    if (icon != null) ...[Icon(icon, size: 16, color: p.textMuted), const SizedBox(width: AppGap.snug)],
                     Expanded(
-                      child: Text(title!,
-                          style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: p.textMuted)),
+                      child: Text(
+                        title!,
+                        style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: p.textMuted),
+                      ),
                     ),
                     if (linkLabel != null)
                       GestureDetector(
                         onTap: onLink,
-                        child: Text(linkLabel!, style: TextStyle(fontSize: AppText.label, color: p.textMuted)),
+                        child: Text(
+                          linkLabel!,
+                          style: TextStyle(fontSize: AppText.label, color: p.textMuted),
+                        ),
                       ),
                   ],
                 ),
@@ -115,10 +117,17 @@ class StatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (dot) ...[
-            Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
             const SizedBox(width: AppGap.xs),
           ],
-          Text(label, style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w600, color: color),
+          ),
         ],
       ),
     );
@@ -135,5 +144,8 @@ class TimeText extends StatelessWidget {
   const TimeText(this.text, {super.key, this.size = AppText.bodyLg, this.weight = FontWeight.w600, this.color});
 
   @override
-  Widget build(BuildContext context) => Text(text, style: AppFonts.numeric(size: size, weight: weight, color: color));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: AppFonts.numeric(size: size, weight: weight, color: color),
+  );
 }

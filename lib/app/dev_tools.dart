@@ -41,11 +41,35 @@ Future<void> seedSampleFamily(WidgetRef ref) async {
   }
   v = await repo.addEntries(v, [
     for (final d in [1, 3, 5])
-      Entry(id: newId(), weekday: d, start: 15 * 60, end: 16 * 60, title: '피아노', kind: EntryKind.academy, place: '도레미 피아노'),
+      Entry(
+        id: newId(),
+        weekday: d,
+        start: 15 * 60,
+        end: 16 * 60,
+        title: '피아노',
+        kind: EntryKind.academy,
+        place: '도레미 피아노',
+      ),
     for (final d in [2, 4])
-      Entry(id: newId(), weekday: d, start: 14 * 60 + 30, end: 15 * 60 + 30, title: '태권도', kind: EntryKind.activity, place: '용인 태권도'),
+      Entry(
+        id: newId(),
+        weekday: d,
+        start: 14 * 60 + 30,
+        end: 15 * 60 + 30,
+        title: '태권도',
+        kind: EntryKind.activity,
+        place: '용인 태권도',
+      ),
     for (final d in [2, 4])
-      Entry(id: newId(), weekday: d, start: 16 * 60 + 30, end: 17 * 60 + 20, title: '영어', kind: EntryKind.academy, place: '키즈 영어'),
+      Entry(
+        id: newId(),
+        weekday: d,
+        start: 16 * 60 + 30,
+        end: 17 * 60 + 20,
+        title: '영어',
+        kind: EntryKind.academy,
+        place: '키즈 영어',
+      ),
   ]);
 
   final second = await repo.addChild(
@@ -58,7 +82,15 @@ Future<void> seedSampleFamily(WidgetRef ref) async {
   final v2 = ref.read(currentVersionProvider(second.id)) ?? await _waitVersion(ref, second.id);
   await repo.addEntries(v2, [
     for (var d = 1; d <= 5; d++)
-      Entry(id: newId(), weekday: d, start: 9 * 60, end: 16 * 60 + 30, title: '어린이집', kind: EntryKind.care, place: '해님 어린이집'),
+      Entry(
+        id: newId(),
+        weekday: d,
+        start: 9 * 60,
+        end: 16 * 60 + 30,
+        title: '어린이집',
+        kind: EntryKind.care,
+        place: '해님 어린이집',
+      ),
   ]);
 }
 

@@ -13,9 +13,12 @@ class AppFonts {
 
   static String? get body => GoogleFonts.notoSansKr().fontFamily;
 
-  static TextStyle numeric({double? size, FontWeight weight = FontWeight.w300, Color? color}) =>
-      GoogleFonts.poppins(fontSize: size, fontWeight: weight, color: color, height: 1.1)
-          .copyWith(fontFamilyFallback: [?body]);
+  static TextStyle numeric({double? size, FontWeight weight = FontWeight.w300, Color? color}) => GoogleFonts.poppins(
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+    height: 1.1,
+  ).copyWith(fontFamilyFallback: [?body]);
 }
 
 ThemeData buildLightTheme() => _buildTheme(Brightness.light, AppPalette.light);
@@ -29,12 +32,7 @@ ThemeData _buildTheme(Brightness brightness, AppPalette p) {
   final scheme = ColorScheme.fromSeed(
     seedColor: p.status.info,
     brightness: brightness,
-  ).copyWith(
-    primary: p.dock,
-    onPrimary: p.onDock,
-    surface: p.surface,
-    error: p.status.urgent,
-  );
+  ).copyWith(primary: p.dock, onPrimary: p.onDock, surface: p.surface, error: p.status.urgent);
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: brightness);
   final text = GoogleFonts.notoSansKrTextTheme(base.textTheme).apply(
     bodyColor: isDark ? const Color(0xFFEDEDED) : const Color(0xFF151517),

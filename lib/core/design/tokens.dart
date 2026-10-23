@@ -21,6 +21,7 @@ class AppText {
   static const title = 15.0; // 카드 제목
   static const titleLg = 16.0; // 큰 카드 제목
   static const heading = 18.0; // 다이얼로그·시트 제목
+  static const numSm = 20.0; // 입력 칸 안 시각("15:00")
 
   /// 화면 대제목("오늘", "시간표"). 레퍼런스의 "Dashboard"처럼 크고 **가늘게**(w300).
   static const display = 32.0;
@@ -96,15 +97,15 @@ enum Breakpoint {
   static Breakpoint fromWidth(double w) => w >= 840
       ? Breakpoint.expanded
       : w >= 600
-          ? Breakpoint.medium
-          : Breakpoint.compact;
+      ? Breakpoint.medium
+      : Breakpoint.compact;
 
   /// 대시보드 카드 열 수
   int get columns => switch (this) {
-        Breakpoint.compact => 1,
-        Breakpoint.medium => 2,
-        Breakpoint.expanded => 3,
-      };
+    Breakpoint.compact => 1,
+    Breakpoint.medium => 2,
+    Breakpoint.expanded => 3,
+  };
 }
 
 /// 본문 최대 폭(폴드 가로에서 카드가 끝까지 늘어나지 않게).

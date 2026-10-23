@@ -35,8 +35,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final session = ref.watch(sessionProvider);
     final firebaseReady = ref.watch(bootstrapProvider).firebaseReady;
 
-    // 가족 코드로 들어왔는데 아직 회원을 안 골랐으면: 기존 회원 중 고르기.
-    if (session.isShared && !session.isOnboarded) return _PickMember(onNew: () => setState(() {}));
+    // 가족 공유 중인데 온보딩에 왔다 = 회원을 아직 안 골랐거나, 기억하던 회원이 사라졌다.
+    // 어느 쪽이든 가족은 그대로 두고 회원만 다시 고른다.
+    if (session.isShared) return _PickMember(onNew: () => setState(() {}));
 
     return Scaffold(
       body: PageBody(
@@ -50,8 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: AppGap.lg),
           if (_joining) ...[
-            if (!firebaseReady)
-              InfoBanner(color: p.status.info, message: '가족 공유 설정(Firebase) 전이라 아직 참여할 수 없어요'),
+            if (!firebaseReady) InfoBanner(color: p.status.info, message: '가족 공유 설정(Firebase) 전이라 아직 참여할 수 없어요'),
             DashCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -71,7 +71,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(controller: _name, decoration: const InputDecoration(labelText: '내 호칭 (예: 아빠, 엄마)')),
+                  TextField(
+                    controller: _name,
+                    decoration: const InputDecoration(labelText: '내 호칭 (예: 아빠, 엄마)'),
+                  ),
                   const SizedBox(height: AppGap.lg),
                   PillTabs<MemberRole>(
                     items: [for (final r in MemberRole.values) (r, r.label, null)],
@@ -172,7 +175,10 @@ class _PickMemberState extends ConsumerState<_PickMember> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(controller: _name, decoration: const InputDecoration(labelText: '내 호칭')),
+                TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(labelText: '내 호칭'),
+                ),
                 const SizedBox(height: AppGap.md),
                 PillTabs<MemberRole>(
                   items: [for (final r in MemberRole.values) (r, r.label, null)],

@@ -32,12 +32,18 @@ class EmptyState extends StatelessWidget {
         children: [
           Text(emoji, style: const TextStyle(fontSize: AppEmoji.lg)),
           const SizedBox(height: AppGap.md),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
+          ),
           if (message != null) ...[
             const SizedBox(height: AppGap.snug),
-            Text(message!, textAlign: TextAlign.center, style: TextStyle(fontSize: AppText.body, color: muted)),
+            Text(
+              message!,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: AppText.body, color: muted),
+            ),
           ],
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppGap.xl),
@@ -68,11 +74,23 @@ class InfoBanner extends StatelessWidget {
       decoration: BoxDecoration(color: p.surface, borderRadius: BorderRadius.circular(AppRadius.pill)),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: AppGap.cozy),
-          Expanded(child: Text(message, style: const TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600),
+            ),
+          ),
           if (actionLabel != null && onAction != null)
-            TextButton(onPressed: onAction, child: Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w700))),
+            TextButton(
+              onPressed: onAction,
+              child: Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
         ],
       ),
     );
@@ -93,10 +111,16 @@ class ChildBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: dot, height: dot, decoration: BoxDecoration(color: tone.accent, shape: BoxShape.circle)),
+        Container(
+          width: dot,
+          height: dot,
+          decoration: BoxDecoration(color: tone.accent, shape: BoxShape.circle),
+        ),
         const SizedBox(width: AppGap.snug),
-        Text(child.name,
-            style: TextStyle(fontSize: large ? AppText.titleLg : AppText.body, fontWeight: FontWeight.w700)),
+        Text(
+          child.name,
+          style: TextStyle(fontSize: large ? AppText.titleLg : AppText.body, fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
@@ -108,8 +132,10 @@ class KindTag extends StatelessWidget {
   const KindTag(this.kind, {super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      Text('${kind.emoji} ${kind.label}', style: TextStyle(fontSize: AppText.label, color: context.palette.textMuted));
+  Widget build(BuildContext context) => Text(
+    '${kind.emoji} ${kind.label}',
+    style: TextStyle(fontSize: AppText.label, color: context.palette.textMuted),
+  );
 }
 
 /// 확인 대화상자. 되돌릴 수 없는(또는 다른 가족에게 바로 보이는) 동작 전에 쓴다.
@@ -142,9 +168,11 @@ Future<bool> confirmDialog(
 void showToast(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message),
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(AppGap.page, 0, AppGap.page, kDockClearance - 16),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(AppGap.page, 0, AppGap.page, kDockClearance - 16),
+      ),
+    );
 }

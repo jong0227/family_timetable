@@ -9,8 +9,5 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko_KR');
   final boot = await Bootstrap.init();
-  runApp(ProviderScope(
-    overrides: [bootstrapProvider.overrideWithValue(boot)],
-    child: const FamilyTimetableApp(),
-  ));
+  runApp(ProviderScope(overrides: [bootstrapProvider.overrideWithValue(boot)], child: const FamilyTimetableApp()));
 }

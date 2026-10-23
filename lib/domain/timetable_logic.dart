@@ -99,17 +99,72 @@ String suggestVersionName(Child child, DateTime now) {
   return '${child.grade}학년 $term';
 }
 
-/// 버전 만들 때 바로 고를 수 있는 이름 후보.
-List<String> versionNameCandidates(Child child, DateTime now) {
-  final suggested = suggestVersionName(child, now);
-  final prefix = child.institution.maxGrade == 0 || child.grade == 0
-      ? '${now.month <= 2 ? now.year - 1 : now.year}년'
-      : '${child.grade}학년';
-  return {
-    suggested,
-    for (final t in ['1학기', '여름방학', '2학기', '겨울방학']) '$prefix $t',
-  }.toList();
+const _terms = ['1학기', '여름방학', '2학기', '겨울방학'];
+
+/// 새 버전 만들 때의 이름 후보. **첫 번째가 기본값**이다.
+///
+/// 학기는 1학기 → 여름방학 → 2학기 → 겨울방학 → 다음 학년 1학기 순서로 흐른다.
+/// 이미 있는 이름 중 이 순서에서 가장 뒤에 있는 것의 **다음**을 기본으로 고른다
+/// ("2학년 2학기"를 쓰는 중이면 "2학년 겨울방학"). 이미 있는 이름은 후보에서 뺀다.
+/// 순서에 맞는 기존 이름이 없으면 오늘 날짜로 짐작한 학기([suggestVersionName])부터.
+List<String> versionNameCandidates(Child child, DateTime now, {Set<String> existing = const {}}) {
+  final graded = child.institution.maxGrade > 0 && child.grade > 0;
+  final schoolYear = now.month <= 2 ? now.year - 1 : now.year;
+  final (thisLabel, nextLabel) = graded
+      ? ('${child.grade}학년', child.grade < child.institution.maxGrade ? '${child.grade + 1}학년' : null)
+      : ('$schoolYear년', '${schoolYear + 1}년');
+  final sequence = [for (final t in _terms) '$thisLabel $t', if (nextLabel != null) '$nextLabel ${_terms.first}'];
+
+  final lastExisting = sequence.lastIndexWhere(existing.contains);
+  final startIndex = lastExisting >= 0
+      ? lastExisting + 1
+      : sequence.indexOf(suggestVersionName(child, now)).clamp(0, sequence.length - 1);
+  final ordered = [...sequence.skip(startIndex), ...sequence.take(startIndex)];
+  return ordered.where((n) => !existing.contains(n)).toList();
 }
+
+/// [candidate]와 같은 요일에 시간이 겹치는 일정들(자기 자신 제외).
+/// 끝 시각 = 다음 시작 시각은 겹침이 아니다(9:40에 끝나고 9:40에 시작).
+List<Entry> findOverlaps(Entry candidate, List<Entry> all) => [
+  for (final e in all)
+    if (e.id != candidate.id && e.weekday == candidate.weekday && e.start < candidate.end && candidate.start < e.end) e,
+];
+
+/// 입력할 때 바로 고를 수 있는 이름 후보. 학교급·종류별로.
+List<String> titleSuggestions(EntryKind kind, Institution inst) => switch (kind) {
+  EntryKind.school => switch (inst) {
+    Institution.elementary => [
+      '국어',
+      '수학',
+      '바른생활',
+      '슬기로운생활',
+      '즐거운생활',
+      '통합',
+      '창체',
+      '영어',
+      '과학',
+      '사회',
+      '체육',
+      '음악',
+      '미술',
+      '도덕',
+      '실과',
+    ],
+    Institution.middle ||
+    Institution.high => ['국어', '수학', '영어', '과학', '사회', '역사', '도덕', '체육', '음악', '미술', '기술가정', '정보', '창체'],
+    _ => ['특별활동'],
+  },
+  EntryKind.academy => ['피아노', '영어', '수학', '미술', '논술', '코딩', '과학'],
+  EntryKind.activity => ['태권도', '수영', '축구', '줄넘기', '발레', '방과후'],
+  EntryKind.care => ['어린이집', '유치원', '돌봄교실', '지역아동센터'],
+  EntryKind.etc => ['병원', '상담'],
+};
+
+/// 좁은 격자 칸에 넣을 짧은 이름. 학교 시간표에 실제로 쓰는 줄임말을 따른다.
+/// 원래 이름은 그대로 저장하고, 화면에서만 줄인다.
+const _shortTitles = {'즐거운생활': '즐생', '슬기로운생활': '슬생', '바른생활': '바생', '안전한생활': '안전', '창의적체험활동': '창체', '기술가정': '기가'};
+
+String shortTitle(String title) => _shortTitles[title.replaceAll(' ', '')] ?? title;
 
 /// 수정 기록 한 줄 요약에 쓰는 일정 설명. "월 3교시 수학", "수 피아노"
 String describeEntry(Entry e) {

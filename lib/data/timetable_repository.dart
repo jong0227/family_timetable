@@ -4,6 +4,9 @@ import '../domain/models.dart';
 import '../domain/timetable_logic.dart';
 import 'family_store.dart';
 
+/// 교시 입력 한 줄(과목, 시각).
+typedef SchoolPeriodInput = ({String subject, int start, int end});
+
 const _uuid = Uuid();
 String newId() => _uuid.v4();
 
@@ -92,7 +95,12 @@ class TimetableRepository {
     return v;
   }
 
-  Future<TimetableVersion> _createVersionDoc(Child child, String name, List<Entry> entries, {String? copiedFrom}) async {
+  Future<TimetableVersion> _createVersionDoc(
+    Child child,
+    String name,
+    List<Entry> entries, {
+    String? copiedFrom,
+  }) async {
     final now = DateTime.now();
     final v = TimetableVersion(
       id: newId(),
@@ -119,9 +127,9 @@ class TimetableRepository {
     if (child.currentVersionId == v.id) {
       final rest = siblings.where((s) => s.id != v.id && !s.deleted).toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      await saveChild(rest.isEmpty
-          ? child.copyWith(clearCurrentVersion: true)
-          : child.copyWith(currentVersionId: rest.first.id));
+      await saveChild(
+        rest.isEmpty ? child.copyWith(clearCurrentVersion: true) : child.copyWith(currentVersionId: rest.first.id),
+      );
     }
   }
 
@@ -141,36 +149,60 @@ class TimetableRepository {
     return saveEntries(v, entries, '${describeEntry(e)} ${exists ? '수정' : '추가'}');
   }
 
-  Future<TimetableVersion> addEntries(TimetableVersion v, List<Entry> es) {
+  /// 새 일정 추가. id가 비어 있으면 여기서 붙인다(화면은 id를 만들지 않는다).
+  Future<TimetableVersion> addEntries(TimetableVersion v, List<Entry> drafts) {
+    final es = [for (final e in drafts) e.id.isEmpty ? e.copyWith(id: newId()) : e];
     if (es.length == 1) return upsertEntry(v, es.first);
-    final days = es.map((e) => weekdayLabel(e.weekday)).toSet().join('·');
-    return saveEntries(v, [...v.entries, ...es], '$days ${es.first.title} 추가');
+    return saveEntries(v, [...v.entries, ...es], '${_describeBatch(es)} 추가');
+  }
+
+  /// 여러 일정을 한 줄로: 이름이 하나면 "월·수·금 피아노", 여럿이면 "피아노·태권도·영어".
+  static String _describeBatch(List<Entry> es) {
+    final titles = es.map((e) => e.title).toSet().toList();
+    if (titles.length == 1) {
+      final days = (es.map((e) => e.weekday).toSet().toList()..sort()).map(weekdayLabel).join('·');
+      return '$days ${titles.single}';
+    }
+    return titles.length <= 3 ? titles.join('·') : '${titles.take(3).join('·')} 외 ${titles.length - 3}개';
   }
 
   Future<TimetableVersion> deleteEntry(TimetableVersion v, Entry e) =>
       saveEntries(v, v.entries.where((x) => x.id != e.id).toList(), '${describeEntry(e)} 삭제');
 
-  /// 한 요일의 학교 교시를 한꺼번에 바꾼다. [subjects]는 1교시부터 순서대로, 빈 문자열이면 그 교시 없음.
-  Future<TimetableVersion> replaceSchoolDay(
-    TimetableVersion v,
-    int weekday,
-    List<({String subject, int start, int end})> periods,
-  ) {
-    final kept = v.entries.where((e) => !(e.weekday == weekday && e.kind == EntryKind.school && e.period != null));
-    final added = <Entry>[
-      for (var i = 0; i < periods.length; i++)
-        if (periods[i].subject.trim().isNotEmpty)
-          Entry(
-            id: newId(),
-            weekday: weekday,
-            start: periods[i].start,
-            end: periods[i].end,
-            title: periods[i].subject.trim(),
-            kind: EntryKind.school,
-            period: i + 1,
-          ),
-    ];
-    return saveEntries(v, [...kept, ...added], '${weekdayLabel(weekday)} 학교 교시 ${added.length}개 입력');
+  /// 한 요일의 학교 교시를 한꺼번에 바꾼다. [periods]는 1교시부터 순서대로, 과목이 비면 그 교시 없음.
+  Future<TimetableVersion> replaceSchoolDay(TimetableVersion v, int weekday, List<SchoolPeriodInput> periods) =>
+      replaceSchoolWeek(v, {weekday: periods});
+
+  /// 여러 요일의 학교 교시를 한 번에 바꾼다. 수정 기록은 **한 장**만 남는다
+  /// (교시 입력 화면에서 저장 한 번 = 되돌리기 한 번).
+  /// 바뀐 게 없는 요일은 건드리지 않고, 아무것도 안 바뀌면 기록도 남기지 않는다.
+  Future<TimetableVersion> replaceSchoolWeek(TimetableVersion v, Map<int, List<SchoolPeriodInput>> byDay) async {
+    var entries = v.entries;
+    final changedDays = <int>[];
+    for (final MapEntry(key: weekday, value: periods) in byDay.entries) {
+      bool isSchoolPeriod(Entry e) => e.weekday == weekday && e.kind == EntryKind.school && e.period != null;
+      final before = entries.where(isSchoolPeriod).toList()..sort((a, b) => a.period!.compareTo(b.period!));
+      final after = <Entry>[
+        for (var i = 0; i < periods.length; i++)
+          if (periods[i].subject.trim().isNotEmpty)
+            Entry(
+              id: newId(),
+              weekday: weekday,
+              start: periods[i].start,
+              end: periods[i].end,
+              title: periods[i].subject.trim(),
+              kind: EntryKind.school,
+              period: i + 1,
+            ),
+      ];
+      String sig(List<Entry> es) => es.map((e) => '${e.period}|${e.title}|${e.start}|${e.end}').join(',');
+      if (sig(before) == sig(after)) continue;
+      changedDays.add(weekday);
+      entries = [...entries.where((e) => !isSchoolPeriod(e)), ...after];
+    }
+    if (changedDays.isEmpty) return v;
+    changedDays.sort();
+    return saveEntries(v, entries, '${changedDays.map(weekdayLabel).join('·')} 학교 교시 입력');
   }
 
   /// 수정 기록 하나를 골라 그 상태로 되돌린다. 되돌린 것 자체도 기록으로 남는다.

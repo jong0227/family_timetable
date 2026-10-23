@@ -108,7 +108,12 @@ class _HeroPagerState extends State<_HeroPager> {
   @override
   Widget build(BuildContext context) {
     final days = widget.days;
-    if (days.length == 1) return SizedBox(height: 200, child: _HeroContent(day: days.first, isToday: widget.isToday));
+    if (days.length == 1) {
+      return SizedBox(
+        height: 200,
+        child: _HeroContent(day: days.first, isToday: widget.isToday),
+      );
+    }
     return Column(
       children: [
         SizedBox(
@@ -176,7 +181,10 @@ class _HeroContent extends StatelessWidget {
           ),
           const Spacer(),
           if (focus == null)
-            Text('쉬는 날이에요', style: TextStyle(fontSize: AppText.titleLg, color: tone.onContainer))
+            Text(
+              '쉬는 날이에요',
+              style: TextStyle(fontSize: AppText.titleLg, color: tone.onContainer),
+            )
           else ...[
             TimeText(
               '${formatMinutes(focus.start)} – ${formatMinutes(focus.end)}',
@@ -192,7 +200,10 @@ class _HeroContent extends StatelessWidget {
               style: TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700, color: tone.onContainer),
             ),
             if (focus.first.place.isNotEmpty)
-              Text(focus.first.place, style: TextStyle(fontSize: AppText.body, color: tone.onContainer)),
+              Text(
+                focus.first.place,
+                style: TextStyle(fontSize: AppText.body, color: tone.onContainer),
+              ),
           ],
         ],
       ),
@@ -222,7 +233,10 @@ class _ChildDayCard extends StatelessWidget {
       child: rows.isEmpty
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: AppGap.md),
-              child: Text('이날은 일정이 없어요', style: TextStyle(fontSize: AppText.body, color: p.textMuted)),
+              child: Text(
+                '이날은 일정이 없어요',
+                style: TextStyle(fontSize: AppText.body, color: p.textMuted),
+              ),
             )
           : Column(children: [for (final r in rows) r.widget]),
     );
@@ -259,10 +273,15 @@ class _BlockRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${e.kind.emoji} $title',
-                    style: const TextStyle(fontSize: AppText.bodyLg, fontWeight: FontWeight.w700)),
                 Text(
-                  ['${formatMinutes(block.start)}–${formatMinutes(block.end)}', if (detail.isNotEmpty) detail].join(' · '),
+                  '${e.kind.emoji} $title',
+                  style: const TextStyle(fontSize: AppText.bodyLg, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  [
+                    '${formatMinutes(block.start)}–${formatMinutes(block.end)}',
+                    if (detail.isNotEmpty) detail,
+                  ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: AppText.label, color: p.textMuted),

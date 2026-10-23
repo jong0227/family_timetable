@@ -74,6 +74,10 @@
 | `KindTag` | 일정 종류(이모지 + 글자) |
 | `confirmDialog` / `showToast` | 확인 / 결과 알림 |
 
+기능 안에서만 쓰는 조립 위젯은 그 기능 폴더의 `widgets/`에 둔다. 예: `features/timetable/widgets/` 의
+`WeekGrid`(주간 격자 — 교시 줄 맞춤 + 방과 후) · `TimetableBoard`(버튼 + 격자, 시간표 탭과 지난 학기 보기가 같이 씀).
+날짜·시각 글자는 `core/format.dart`(`formatDateTime`, `formatRelative`)로만 만든다.
+
 같은 모양을 두 화면에서 직접 그리게 되면 컴포넌트로 올리고 이 표에 한 줄 추가한다.
 
 ## 5. 화면 구성 패턴

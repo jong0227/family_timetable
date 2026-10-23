@@ -79,6 +79,58 @@ void main() {
     expect(child.currentVersionId, older.id);
   });
 
+  test('교시 한꺼번에 입력: 여러 요일을 저장해도 기록은 한 장, 안 바뀌면 기록 없음', () async {
+    final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+    var v = await versionById(child.currentVersionId!);
+    final before = (await revisionsOf(v.id)).length;
+
+    final week = {
+      1: [(subject: '국어', start: 540, end: 580), (subject: '수학', start: 590, end: 630)],
+      2: [(subject: '', start: 540, end: 580), (subject: '통합', start: 590, end: 630)],
+      3: <({String subject, int start, int end})>[],
+    };
+    v = await repo.replaceSchoolWeek(v, week);
+    expect(v.entries, hasLength(3));
+    expect(v.entries.where((e) => e.weekday == 2).single.period, 2, reason: '빈 교시는 건너뛰어도 교시 번호는 유지');
+    final revs = await revisionsOf(v.id);
+    expect(revs, hasLength(before + 1));
+    expect(revs.first.summary, '월·화 학교 교시 입력');
+
+    await repo.replaceSchoolWeek(v, week);
+    expect(await revisionsOf(v.id), hasLength(before + 1), reason: '같은 내용 다시 저장은 기록을 남기지 않는다');
+  });
+
+  test('교시 입력은 학원 일정을 건드리지 않는다', () async {
+    final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+    var v = await repo.upsertEntry(await versionById(child.currentVersionId!), piano());
+    v = await repo.replaceSchoolWeek(v, {
+      1: [(subject: '국어', start: 540, end: 580)],
+    });
+    expect(v.entries.map((e) => e.title), containsAll(['피아노', '국어']));
+  });
+
+  test('id 없이 추가하면 리포지토리가 새 id를 붙인다', () async {
+    final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+    final v = await repo.addEntries(await versionById(child.currentVersionId!), [
+      piano().copyWith(id: '', weekday: 1),
+      piano().copyWith(id: '', weekday: 3),
+    ]);
+    final ids = v.entries.map((e) => e.id).toSet();
+    expect(ids, hasLength(2));
+    expect(ids.contains(''), isFalse);
+    expect((await revisionsOf(v.id)).first.summary, '월·수 피아노 추가');
+  });
+
+  test('이름이 다른 일정을 한꺼번에 추가하면 기록 요약에 이름을 모두 적는다', () async {
+    final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+    final v = await repo.addEntries(await versionById(child.currentVersionId!), [
+      piano().copyWith(id: '', weekday: 5),
+      piano().copyWith(id: '', weekday: 1),
+      piano().copyWith(id: '', weekday: 2, title: '태권도'),
+    ]);
+    expect((await revisionsOf(v.id)).first.summary, '피아노·태권도 추가');
+  });
+
   test('수정 기록은 버전마다 최대 개수까지만 남는다', () async {
     final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
     var v = await versionById(child.currentVersionId!);

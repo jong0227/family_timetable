@@ -16,6 +16,11 @@ class FamilyTimetableApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
+    // 이 폰이 기억하는 회원이 가족 데이터에 없으면(다른 가족이 지웠거나 데이터가 초기화됨)
+    // "아무도 아닌 사람"으로 앱을 쓰게 두지 않고 온보딩(회원 고르기)으로 돌려보낸다.
+    final members = ref.watch(membersProvider);
+    final memberMissing =
+        session.isOnboarded && members.hasValue && !members.requireValue.any((m) => m.id == session.memberId);
     return MaterialApp(
       title: '가족 시간표',
       debugShowCheckedModeBanner: false,
@@ -24,7 +29,7 @@ class FamilyTimetableApp extends ConsumerWidget {
       locale: const Locale('ko', 'KR'),
       supportedLocales: const [Locale('ko', 'KR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: session.isOnboarded ? const AppShell() : const OnboardingScreen(),
+      home: session.isOnboarded && !memberMissing ? const AppShell() : const OnboardingScreen(),
     );
   }
 }
@@ -62,7 +67,9 @@ class _AppShellState extends ConsumerState<AppShell> {
               child: InfoBanner(color: p.status.urgent, message: '가족 중 누군가 새 버전 앱을 쓰고 있어요. 앱을 업데이트해 주세요.'),
             ),
           ),
-        Expanded(child: IndexedStack(index: _index, children: [for (final t in _tabs) t.$2])),
+        Expanded(
+          child: IndexedStack(index: _index, children: [for (final t in _tabs) t.$2]),
+        ),
       ],
     );
 

@@ -7,8 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 Entry e(int weekday, int start, int end, String title, {EntryKind kind = EntryKind.academy, int? period}) =>
     Entry(id: '$weekday-$start', weekday: weekday, start: start, end: end, title: title, kind: kind, period: period);
 
-Child child(String id, {Institution inst = Institution.elementary, int grade = 2}) => Child(
-    id: id, name: id, colorIndex: 0, institution: inst, grade: grade, order: 0, updatedAt: DateTime(2026));
+Child child(String id, {Institution inst = Institution.elementary, int grade = 2}) =>
+    Child(id: id, name: id, colorIndex: 0, institution: inst, grade: grade, order: 0, updatedAt: DateTime(2026));
 
 void main() {
   group('교시 기본 시간', () {
@@ -31,6 +31,19 @@ void main() {
     });
   });
 
+  test('겹치는 일정 찾기: 맞닿는 건 겹침이 아니다', () {
+    final all = [e(1, 540, 820, '학교'), e(1, 900, 960, '피아노'), e(2, 900, 960, '태권도')];
+    expect(findOverlaps(e(1, 930, 1000, '영어'), all).single.title, '피아노');
+    expect(findOverlaps(e(1, 960, 1000, '영어'), all), isEmpty);
+    expect(findOverlaps(all[1], all), isEmpty, reason: '자기 자신은 제외');
+  });
+
+  test('격자용 짧은 과목 이름', () {
+    expect(shortTitle('즐거운생활'), '즐생');
+    expect(shortTitle('슬기로운 생활'), '슬생');
+    expect(shortTitle('수학'), '수학');
+  });
+
   test('학교 교시는 한 덩어리로 묶는다', () {
     final blocks = groupDay([
       e(1, 540, 580, '국어', kind: EntryKind.school, period: 1),
@@ -47,6 +60,20 @@ void main() {
       expect(suggestVersionName(child('a'), DateTime(2026, 10, 23)), '2학년 2학기');
       expect(suggestVersionName(child('a'), DateTime(2026, 3, 2)), '2학년 1학기');
     });
+    test('새 학기 기본값은 이미 있는 학기의 다음', () {
+      final c = child('a');
+      final oct = DateTime(2026, 10, 23);
+      expect(versionNameCandidates(c, oct).first, '2학년 2학기', reason: '아무것도 없으면 오늘 날짜 기준');
+      expect(versionNameCandidates(c, oct, existing: {'2학년 2학기'}).first, '2학년 겨울방학');
+      expect(versionNameCandidates(c, oct, existing: {'2학년 2학기', '2학년 겨울방학'}).first, '3학년 1학기');
+      expect(versionNameCandidates(c, oct, existing: {'2학년 2학기'}), isNot(contains('2학년 2학기')));
+    });
+
+    test('마지막 학년은 다음 학년으로 넘기지 않는다', () {
+      final c = child('a', grade: 6);
+      expect(versionNameCandidates(c, DateTime(2026, 10, 1), existing: {'6학년 겨울방학'}), isNot(contains('7학년 1학기')));
+    });
+
     test('어린이집은 연도+학기, 1~2월은 지난 학년도', () {
       final c = child('b', inst: Institution.daycare, grade: 0);
       expect(suggestVersionName(c, DateTime(2027, 1, 10)), '2026년 겨울방학');
@@ -62,8 +89,7 @@ void main() {
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );
-    DaySummary at(int now) =>
-        buildDaySummary(weekday: 4, children: [child('a')], versionOf: (_) => v, nowMinutes: now);
+    DaySummary at(int now) => buildDaySummary(weekday: 4, children: [child('a')], versionOf: (_) => v, nowMinutes: now);
 
     expect(at(600).children.single.state, NowState.ongoing);
     expect(at(850).children.single.state, NowState.upcoming);

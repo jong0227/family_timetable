@@ -27,49 +27,56 @@ class FamilyScreen extends ConsumerWidget {
         PageHeader(title: '가족', subtitle: me == null ? null : '${me.name}(으)로 쓰는 중'),
         _SharingCard(session: session),
         const SizedBox(height: AppGap.md),
-        DashboardGrid(children: [
-          DashCard(
-            icon: Icons.child_care_rounded,
-            title: '아이들 ${children.length}명',
-            linkLabel: perms.canManageChildren ? '+ 추가' : null,
-            onLink: () => showChildFormSheet(context),
-            child: children.isEmpty
-                ? Text('아직 아이가 없어요', style: TextStyle(fontSize: AppText.body, color: p.textMuted))
-                : Column(
-                    children: [
-                      for (final c in children)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: p.child(c.colorIndex).container,
-                            child: Text(c.name.characters.first,
-                                style: TextStyle(color: p.child(c.colorIndex).onContainer, fontWeight: FontWeight.w700)),
+        DashboardGrid(
+          children: [
+            DashCard(
+              icon: Icons.child_care_rounded,
+              title: '아이들 ${children.length}명',
+              linkLabel: perms.canManageChildren ? '+ 추가' : null,
+              onLink: () => showChildFormSheet(context),
+              child: children.isEmpty
+                  ? Text(
+                      '아직 아이가 없어요',
+                      style: TextStyle(fontSize: AppText.body, color: p.textMuted),
+                    )
+                  : Column(
+                      children: [
+                        for (final c in children)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: p.child(c.colorIndex).container,
+                              child: Text(
+                                c.name.characters.first,
+                                style: TextStyle(color: p.child(c.colorIndex).onContainer, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            subtitle: Text(c.institutionText, style: TextStyle(color: p.textMuted)),
+                            trailing: perms.canManageChildren ? const Icon(Icons.chevron_right_rounded) : null,
+                            onTap: perms.canManageChildren ? () => showChildFormSheet(context, child: c) : null,
                           ),
-                          title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text(c.institutionText, style: TextStyle(color: p.textMuted)),
-                          trailing: perms.canManageChildren ? const Icon(Icons.chevron_right_rounded) : null,
-                          onTap: perms.canManageChildren ? () => showChildFormSheet(context, child: c) : null,
-                        ),
-                    ],
-                  ),
-          ),
-          DashCard(
-            icon: Icons.people_alt_outlined,
-            title: '가족 구성원 ${members.length}명',
-            child: Column(
-              children: [
-                for (final m in members)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(m.role.label, style: TextStyle(color: p.textMuted)),
-                    trailing: m.id == me?.id ? StatusChip('나', color: p.status.positive) : null,
-                  ),
-              ],
+                      ],
+                    ),
             ),
-          ),
-        ]),
+            DashCard(
+              icon: Icons.people_alt_outlined,
+              title: '가족 구성원 ${members.length}명',
+              child: Column(
+                children: [
+                  for (final m in members)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(m.role.label, style: TextStyle(color: p.textMuted)),
+                      trailing: m.id == me?.id ? StatusChip('나', color: p.status.positive) : null,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -91,7 +98,9 @@ class _SharingCard extends ConsumerWidget {
         title: '가족 공유 중',
         child: Row(
           children: [
-            Expanded(child: TimeText(code, size: AppText.kpi, weight: FontWeight.w300)),
+            Expanded(
+              child: TimeText(code, size: AppText.kpi, weight: FontWeight.w300),
+            ),
             OutlinedButton(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: code));
