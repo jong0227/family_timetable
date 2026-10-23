@@ -99,7 +99,21 @@ String suggestVersionName(Child child, DateTime now) {
   return '${child.grade}학년 $term';
 }
 
+/// 오늘 실제로 쓰는 시간표.
+///
+/// 1. 기간이 오늘을 덮는 시간표가 있으면 그것(여러 개면 가장 최근에 만든 것).
+///    → 여름방학 시간표에 7/21~8/18을 정해 두면 그 기간엔 저절로 방학 시간표가 된다.
+/// 2. 없으면 사용자가 "지금 쓰기"로 고른 시간표([Child.currentVersionId]).
+///    → 방학이 끝나면 따로 바꾸지 않아도 원래 학기 시간표로 돌아온다.
+TimetableVersion? effectiveVersion(Child child, List<TimetableVersion> versions, DateTime today) {
+  final mine = versions.where((v) => v.childId == child.id && !v.deleted).toList();
+  final dated = mine.where((v) => v.covers(today)).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return dated.firstOrNull ?? mine.where((v) => v.id == child.currentVersionId).firstOrNull;
+}
+
 const _terms = ['1학기', '여름방학', '2학기', '겨울방학'];
+
+VersionKind _kindOfTerm(String term) => term.contains('방학') ? VersionKind.vacation : VersionKind.term;
 
 /// 새 버전 만들 때의 이름 후보. **첫 번째가 기본값**이다.
 ///
@@ -107,7 +121,9 @@ const _terms = ['1학기', '여름방학', '2학기', '겨울방학'];
 /// 이미 있는 이름 중 이 순서에서 가장 뒤에 있는 것의 **다음**을 기본으로 고른다
 /// ("2학년 2학기"를 쓰는 중이면 "2학년 겨울방학"). 이미 있는 이름은 후보에서 뺀다.
 /// 순서에 맞는 기존 이름이 없으면 오늘 날짜로 짐작한 학기([suggestVersionName])부터.
-List<String> versionNameCandidates(Child child, DateTime now, {Set<String> existing = const {}}) {
+/// [kind]를 주면 그 종류(학기만 / 방학만) 이름만 낸다. 순서 판단은 두 종류를 합친 흐름으로 한다
+/// ("2학년 1학기"까지 있으면 다음 방학은 "2학년 여름방학").
+List<String> versionNameCandidates(Child child, DateTime now, {Set<String> existing = const {}, VersionKind? kind}) {
   final graded = child.institution.maxGrade > 0 && child.grade > 0;
   final schoolYear = now.month <= 2 ? now.year - 1 : now.year;
   final (thisLabel, nextLabel) = graded
@@ -120,8 +136,13 @@ List<String> versionNameCandidates(Child child, DateTime now, {Set<String> exist
       ? lastExisting + 1
       : sequence.indexOf(suggestVersionName(child, now)).clamp(0, sequence.length - 1);
   final ordered = [...sequence.skip(startIndex), ...sequence.take(startIndex)];
-  return ordered.where((n) => !existing.contains(n)).toList();
+  return ordered.where((n) => !existing.contains(n) && (kind == null || _kindOfTerm(n) == kind)).toList();
 }
+
+/// 방학 시간표를 학기 시간표에서 복제할 때: 학교 교시는 빼고(방학엔 수업이 없다)
+/// 학원·방과후·활동·돌봄만 남긴다.
+List<Entry> entriesForVacation(List<Entry> termEntries) =>
+    termEntries.where((e) => !(e.kind == EntryKind.school && e.period != null)).toList();
 
 /// [candidate]와 같은 요일에 시간이 겹치는 일정들(자기 자신 제외).
 /// 끝 시각 = 다음 시작 시각은 겹침이 아니다(9:40에 끝나고 9:40에 시작).

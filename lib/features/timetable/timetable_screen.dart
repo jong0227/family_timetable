@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/design/design.dart';
+import '../../core/format.dart';
 import '../../domain/models.dart';
 import '../family/child_form_sheet.dart';
 import 'revisions_screen.dart';
@@ -78,7 +79,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
 }
 
 /// "지금: 2학년 2학기" + 학기 관리 / 수정 기록 바로가기.
-class _VersionCard extends StatelessWidget {
+class _VersionCard extends ConsumerWidget {
   final Child child;
   final TimetableVersion? version;
   final int versionCount;
@@ -86,8 +87,9 @@ class _VersionCard extends StatelessWidget {
   const _VersionCard({required this.child, required this.version, required this.versionCount});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
+    final today = ref.watch(todayProvider);
     final tone = p.child(child.colorIndex);
     final v = version;
     return HeroCard(
@@ -101,7 +103,10 @@ class _VersionCard extends StatelessWidget {
             children: [
               ChildBadge(child),
               const Spacer(),
-              if (v != null) StatusChip('사용 중', color: p.status.positive, dot: true),
+              if (v != null)
+                v.covers(today)
+                    ? StatusChip('방학 · ${formatDateShort(v.endDate!)}까지', color: p.status.positive, dot: true)
+                    : StatusChip('사용 중', color: p.status.positive, dot: true),
             ],
           ),
           const SizedBox(height: AppGap.lg),
@@ -114,7 +119,7 @@ class _VersionCard extends StatelessWidget {
             children: [
               _HeroLink(
                 icon: Icons.layers_outlined,
-                label: '학기 $versionCount개',
+                label: '시간표 $versionCount개',
                 color: tone.onContainer,
                 onTap: () => Navigator.of(
                   context,

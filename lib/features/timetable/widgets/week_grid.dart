@@ -157,6 +157,9 @@ class _Cell extends StatelessWidget {
 
   const _Cell({required this.entry, required this.label, required this.school, required this.tone, this.onTap});
 
+  /// "15:00–16:00"(Poppins 10)이 한 줄에 들어가는 칸 안쪽 폭. 이보다 좁으면 두 줄로 나눈다.
+  static const _rangeOnOneLineWidth = 64.0;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -174,21 +177,32 @@ class _Cell extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 4, 4, 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: AppFonts.numeric(size: AppText.micro, weight: FontWeight.w600, color: fg ?? p.textMuted),
-                ),
-                Text(
-                  shortTitle(entry.title),
-                  maxLines: school ? 1 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w700, color: fg, height: 1.25),
-                ),
-              ],
+            // 방과 후 칸은 끝 시각도 보여준다. 칸이 넓으면 위에 "15:00–16:00" 한 줄,
+            // 좁으면(플립) 위에 시작·아래에 "~16:00" — 달력의 일정 블록처럼 위 끝 = 시작, 아래 끝 = 끝.
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final timeStyle = AppFonts.numeric(
+                  size: AppText.micro,
+                  weight: FontWeight.w600,
+                  color: fg ?? p.textMuted,
+                );
+                final wide = c.maxWidth >= _rangeOnOneLineWidth;
+                final end = formatMinutes(entry.end);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(school || !wide ? label : '$label–$end', style: timeStyle),
+                    Text(
+                      shortTitle(entry.title),
+                      maxLines: school ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w700, color: fg, height: 1.25),
+                    ),
+                    if (!school && !wide) Text('~$end', style: timeStyle),
+                  ],
+                );
+              },
             ),
           ),
         ),

@@ -6,6 +6,13 @@ import '../domain/models.dart';
 String formatDateTime(DateTime t) =>
     '${t.month}월 ${t.day}일 (${weekdayLabel(t.weekday)}) ${t.hour}:${t.minute.toString().padLeft(2, '0')}';
 
+/// "7/21"
+String formatDateShort(DateTime d) => '${d.month}/${d.day}';
+
+/// 시간표 적용 기간 "7/21~8/18". 기간이 없으면 null.
+String? formatPeriod(TimetableVersion v) =>
+    v.hasPeriod ? '${formatDateShort(v.startDate!)}~${formatDateShort(v.endDate!)}' : null;
+
 /// 오늘이면 "오늘 14:05", 어제면 "어제 14:05", 아니면 [formatDateTime].
 String formatRelative(DateTime t, {DateTime? now}) {
   final n = now ?? DateTime.now();

@@ -45,7 +45,7 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                   label: const Text('일정 추가'),
                 ),
               ),
-              if (widget.child.institution.hasPeriods) ...[
+              if (widget.child.institution.hasPeriods && !v.isVacation) ...[
                 const SizedBox(width: AppGap.sm),
                 Expanded(
                   child: OutlinedButton.icon(
@@ -70,7 +70,7 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                   emoji: '🗓️',
                   title: '아직 일정이 없어요',
                   message: canEdit
-                      ? (widget.child.institution.hasPeriods
+                      ? (widget.child.institution.hasPeriods && !v.isVacation
                             ? '학교 시간표는 "교시 입력"으로, 학원은 "일정 추가"로 넣어 보세요.'
                             : '"일정 추가"로 등원·하원 시간부터 넣어 보세요.')
                       : null,

@@ -285,12 +285,44 @@ class Entry {
   );
 }
 
-/// 이름 붙은 시간표 한 벌. "2학년 1학기", "2학년 여름방학"처럼 학기마다 하나씩 만들고,
-/// 지난 학기 것도 지우지 않고 남겨서 나중에 다시 볼 수 있다.
+/// 시간표 종류. 방학은 교시가 없고, 기간을 정해 두면 그 기간에 저절로 쓰인다.
+enum VersionKind {
+  term('학기'),
+  vacation('방학');
+
+  final String label;
+  const VersionKind(this.label);
+
+  /// 저장된 값이 없으면(스키마 v2 이전 데이터) 이름으로 짐작한다: "…방학"이면 방학.
+  static VersionKind parse(String? s, {required String name}) =>
+      VersionKind.values.where((e) => e.name == s).firstOrNull ??
+      (name.contains('방학') ? VersionKind.vacation : VersionKind.term);
+}
+
+/// 날짜만(시각 없이) "2026-07-21"로 저장한다. 시간대가 끼어들어 하루 밀리는 일을 막으려고.
+String _dateOnly(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+DateTime? _parseDateOnly(dynamic v) {
+  if (v is! String) return null;
+  final d = DateTime.tryParse(v);
+  return d == null ? null : DateTime(d.year, d.month, d.day);
+}
+
+/// 이름 붙은 시간표 한 벌. "2학년 1학기", "2학년 여름방학"처럼 학기·방학마다 하나씩 만들고,
+/// 지난 것도 지우지 않고 남겨서 나중에 다시 볼 수 있다.
+///
+/// 방학 시간표에 기간([startDate]~[endDate])을 정해 두면 그 기간 동안은 저절로 "지금 쓰는
+/// 시간표"가 되고, 기간이 끝나면 원래 쓰던 학기 시간표로 돌아간다([effectiveVersion]).
 class TimetableVersion {
   final String id;
   final String childId;
   final String name;
+  final VersionKind kind;
+
+  /// 적용 기간(양 끝 포함, 날짜만). 둘 다 있을 때만 의미가 있다.
+  final DateTime? startDate;
+  final DateTime? endDate;
   final List<Entry> entries;
   final bool deleted;
   final DateTime createdAt;
@@ -300,16 +332,39 @@ class TimetableVersion {
     required this.id,
     required this.childId,
     required this.name,
+    this.kind = VersionKind.term,
+    this.startDate,
+    this.endDate,
     required this.entries,
     this.deleted = false,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  TimetableVersion copyWith({String? name, List<Entry>? entries, bool? deleted}) => TimetableVersion(
+  bool get isVacation => kind == VersionKind.vacation;
+  bool get hasPeriod => startDate != null && endDate != null;
+
+  /// [day]가 적용 기간 안인가(양 끝 포함).
+  bool covers(DateTime day) {
+    if (!hasPeriod) return false;
+    final d = DateTime(day.year, day.month, day.day);
+    return !d.isBefore(startDate!) && !d.isAfter(endDate!);
+  }
+
+  TimetableVersion copyWith({
+    String? name,
+    List<Entry>? entries,
+    bool? deleted,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool clearPeriod = false,
+  }) => TimetableVersion(
     id: id,
     childId: childId,
     name: name ?? this.name,
+    kind: kind,
+    startDate: clearPeriod ? null : (startDate ?? this.startDate),
+    endDate: clearPeriod ? null : (endDate ?? this.endDate),
     entries: entries ?? this.entries,
     deleted: deleted ?? this.deleted,
     createdAt: createdAt,
@@ -323,21 +378,30 @@ class TimetableVersion {
     'id': id,
     'childId': childId,
     'name': name,
+    'kind': kind.name,
+    'startDate': startDate == null ? null : _dateOnly(startDate!),
+    'endDate': endDate == null ? null : _dateOnly(endDate!),
     'entries': entries.map((e) => e.toJson()).toList(),
     'deleted': deleted,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
 
-  factory TimetableVersion.fromJson(Map<String, dynamic> j) => TimetableVersion(
-    id: j['id'] as String,
-    childId: (j['childId'] as String?) ?? '',
-    name: (j['name'] as String?) ?? '',
-    entries: entriesFromJson(j['entries']),
-    deleted: j['deleted'] == true,
-    createdAt: _parseDate(j['createdAt']),
-    updatedAt: _parseDate(j['updatedAt']),
-  );
+  factory TimetableVersion.fromJson(Map<String, dynamic> j) {
+    final name = (j['name'] as String?) ?? '';
+    return TimetableVersion(
+      id: j['id'] as String,
+      childId: (j['childId'] as String?) ?? '',
+      name: name,
+      kind: VersionKind.parse(j['kind'] as String?, name: name),
+      startDate: _parseDateOnly(j['startDate']),
+      endDate: _parseDateOnly(j['endDate']),
+      entries: entriesFromJson(j['entries']),
+      deleted: j['deleted'] == true,
+      createdAt: _parseDate(j['createdAt']),
+      updatedAt: _parseDate(j['updatedAt']),
+    );
+  }
 }
 
 /// 버전 안의 수정 기록. 시간표를 고칠 때마다 "고친 뒤 상태"를 통째로 한 장 찍어 둔다.

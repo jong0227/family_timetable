@@ -44,7 +44,9 @@ abstract class FamilyStore {
 /// - v1 (2026-10-23) 처음
 /// - v2 (2026-10-23) 일정 종류에 `afterSchool`(학교 방과후) 추가. v1 앱은 이걸 '기타'로 읽고,
 ///   그 상태로 고쳐 저장하면 방과후가 기타로 바뀌어 버린다 → 그래서 버전을 올려 옛 앱에 업데이트 안내.
-const kSchemaVersion = 2;
+/// - v3 (2026-10-23) 시간표에 종류(`kind`: 학기/방학)와 방학 기간(`startDate`, `endDate`) 추가.
+///   v2 앱은 이 필드를 몰라서, 그 시간표를 고쳐 저장하면 기간이 지워진다.
+const kSchemaVersion = 3;
 
 class FamilyMeta {
   final int schemaVersion;

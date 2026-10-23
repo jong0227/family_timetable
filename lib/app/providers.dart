@@ -4,6 +4,7 @@ import '../data/family_store.dart';
 import '../data/timetable_repository.dart';
 import '../domain/models.dart';
 import '../domain/permissions.dart';
+import '../domain/timetable_logic.dart';
 import 'bootstrap.dart';
 import 'session.dart';
 
@@ -78,13 +79,17 @@ final repositoryProvider = Provider<TimetableRepository>(
   (ref) => TimetableRepository(ref.watch(storeProvider), actorName: ref.watch(meProvider)?.name ?? '알 수 없음'),
 );
 
-/// 자녀별 "지금 쓰는 시간표". 버전이 없으면 null.
+/// 오늘 날짜. 앱을 켜 둔 채 날짜가 바뀌어도 방학 자동 적용이 따라가도록, 화면이 다시 앞으로
+/// 나올 때(AppShell의 resumed) 새로 고친다.
+final todayProvider = StateProvider<DateTime>((_) => DateTime.now());
+
+/// 자녀별 "오늘 쓰는 시간표". 방학 기간이면 방학 시간표, 아니면 고른 시간표([effectiveVersion]).
+/// 버전이 없으면 null.
 final currentVersionProvider = Provider.family<TimetableVersion?, String>((ref, childId) {
-  final children = ref.watch(childrenProvider).valueOrNull ?? const [];
-  final versions = ref.watch(versionsProvider).valueOrNull ?? const [];
-  final child = children.where((c) => c.id == childId).firstOrNull;
+  final child = ref.watch(childProvider(childId));
   if (child == null) return null;
-  return versions.where((v) => v.id == child.currentVersionId).firstOrNull;
+  final versions = ref.watch(versionsProvider).valueOrNull ?? const [];
+  return effectiveVersion(child, versions, ref.watch(todayProvider));
 });
 
 /// 버전 하나(지워졌거나 없으면 null). 지난 버전 보기·수정 기록 화면이 쓴다.

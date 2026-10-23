@@ -69,6 +69,18 @@ void main() {
       expect(versionNameCandidates(c, oct, existing: {'2학년 2학기'}), isNot(contains('2학년 2학기')));
     });
 
+    test('종류를 고르면 그 종류 이름만, 순서는 학기·방학을 이어서 판단', () {
+      final c = child('a');
+      final oct = DateTime(2026, 10, 23);
+      final existing = {'2학년 1학기', '2학년 여름방학', '2학년 2학기'};
+      expect(versionNameCandidates(c, oct, existing: existing, kind: VersionKind.vacation).first, '2학년 겨울방학');
+      expect(versionNameCandidates(c, oct, existing: existing, kind: VersionKind.term).first, '3학년 1학기');
+      expect(
+        versionNameCandidates(c, oct, existing: existing, kind: VersionKind.term).any((n) => n.contains('방학')),
+        isFalse,
+      );
+    });
+
     test('마지막 학년은 다음 학년으로 넘기지 않는다', () {
       final c = child('a', grade: 6);
       expect(versionNameCandidates(c, DateTime(2026, 10, 1), existing: {'6학년 겨울방학'}), isNot(contains('7학년 1학기')));

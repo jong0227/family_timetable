@@ -47,7 +47,9 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
   bool _saving = false;
 
   bool get _editing => _original != null;
-  bool get _usesPeriods => _kind == EntryKind.school && widget.child.institution.hasPeriods;
+  // 방학 시간표엔 교시가 없다(학교에 가도 돌봄·방과후처럼 시간으로 잡는다).
+  bool get _usesPeriods =>
+      _kind == EntryKind.school && widget.child.institution.hasPeriods && !widget.version.isVacation;
 
   final _startFocus = FocusNode();
   final _endFocus = FocusNode();

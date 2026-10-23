@@ -75,7 +75,9 @@ class TimetableRepository {
       order: order,
       updatedAt: DateTime.now(),
     );
-    final v = await _createVersionDoc(child, firstVersionName ?? suggestVersionName(child, DateTime.now()), const []);
+    final versionName = firstVersionName ?? suggestVersionName(child, DateTime.now());
+    // 1~2월에 처음 만들면 "○○ 겨울방학"이 추천되므로 이름으로 종류를 정한다.
+    final v = await _createVersionDoc(child, versionName, const [], kind: VersionKind.parse(null, name: versionName));
     child = child.copyWith(currentVersionId: v.id);
     await store.put(Collections.children, child.id, child.toJson());
     return child;
@@ -88,25 +90,56 @@ class TimetableRepository {
 
   // ── 버전 ───────────────────────────────────────────────
 
-  /// 새 버전. [copyFrom]을 주면 그 일정을 그대로 복제해서 시작한다
-  /// (새 학기 시간표는 대부분 지난 학기와 비슷하니까).
-  /// [makeCurrent]면 바로 지금 쓰는 시간표로 바꾼다.
+  /// 새 버전. [copyFrom]을 주면 그 일정을 복제해서 시작한다
+  /// (새 학기 시간표는 대부분 지난 학기와 비슷하니까). 방학 시간표로 복제하면
+  /// 학교 교시는 빼고 학원·방과후 등만 가져온다.
+  ///
+  /// 지금 쓰는 시간표로 바뀌는가:
+  /// - 기간을 정한 방학 → 바꾸지 않는다. 그 기간이 되면 저절로 쓰이고, 끝나면 학기로 돌아온다.
+  /// - 그 밖(학기, 기간 없는 방학) → [makeCurrent]면 바로 지금 쓰는 시간표가 된다.
   Future<TimetableVersion> createVersion(
     Child child,
     String name, {
     TimetableVersion? copyFrom,
+    VersionKind kind = VersionKind.term,
+    DateTime? startDate,
+    DateTime? endDate,
     bool makeCurrent = true,
   }) async {
-    final entries = copyFrom == null ? const <Entry>[] : [for (final e in copyFrom.entries) e.copyWith(id: newId())];
-    final v = await _createVersionDoc(child, name, entries, copiedFrom: copyFrom?.name);
-    if (makeCurrent) await saveChild(child.copyWith(currentVersionId: v.id));
+    var source = copyFrom?.entries ?? const <Entry>[];
+    if (kind == VersionKind.vacation) source = entriesForVacation(source);
+    final entries = [for (final e in source) e.copyWith(id: newId())];
+    final v = await _createVersionDoc(
+      child,
+      name,
+      entries,
+      kind: kind,
+      startDate: startDate,
+      endDate: endDate,
+      copiedFrom: copyFrom?.name,
+    );
+    final dated = startDate != null && endDate != null;
+    if (makeCurrent && !(kind == VersionKind.vacation && dated)) {
+      await saveChild(child.copyWith(currentVersionId: v.id));
+    }
     return v;
   }
+
+  /// 방학 기간 정하기/바꾸기. [start]·[end] 둘 다 null이면 기간을 지운다.
+  Future<void> setVersionPeriod(TimetableVersion v, DateTime? start, DateTime? end) => store.put(
+    Collections.versions,
+    v.id,
+    (start == null || end == null ? v.copyWith(clearPeriod: true) : v.copyWith(startDate: start, endDate: end))
+        .toJson(),
+  );
 
   Future<TimetableVersion> _createVersionDoc(
     Child child,
     String name,
     List<Entry> entries, {
+    VersionKind kind = VersionKind.term,
+    DateTime? startDate,
+    DateTime? endDate,
     String? copiedFrom,
   }) async {
     final now = DateTime.now();
@@ -114,6 +147,9 @@ class TimetableRepository {
       id: newId(),
       childId: child.id,
       name: name,
+      kind: kind,
+      startDate: startDate,
+      endDate: endDate,
       entries: entries,
       createdAt: now,
       updatedAt: now,

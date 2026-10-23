@@ -1,6 +1,7 @@
 import 'package:family_timetable/data/family_store.dart';
 import 'package:family_timetable/data/timetable_repository.dart';
 import 'package:family_timetable/domain/models.dart';
+import 'package:family_timetable/domain/timetable_logic.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 버전·수정 기록·되돌리기 규칙. "잘못 고쳐도 되돌릴 수 있다"가 이 앱의 약속이라
@@ -147,6 +148,87 @@ void main() {
     final e = piano().copyWith(kind: EntryKind.afterSchool, title: '로봇');
     expect(Entry.fromJson(e.toJson()).kind, EntryKind.afterSchool);
     expect(Entry.fromJson({...e.toJson(), 'kind': 'futureKind'}).kind, EntryKind.etc);
+  });
+
+  group('방학 시간표', () {
+    Future<Child> childNow(String id) async => Child.fromJson((await store.read(Collections.children))[id]!);
+
+    test('학기에서 복제하면 학교 교시는 빼고 학원·방과후만 가져온다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      var term = await versionById(child.currentVersionId!);
+      term = await repo.replaceSchoolWeek(term, {
+        1: [(subject: '국어', start: 540, end: 580)],
+      });
+      term = await repo.addEntries(term, [
+        piano().copyWith(id: ''),
+        piano().copyWith(id: '', kind: EntryKind.afterSchool),
+      ]);
+
+      final vac = await repo.createVersion(child, '2학년 겨울방학', copyFrom: term, kind: VersionKind.vacation);
+      expect(vac.kind, VersionKind.vacation);
+      expect(vac.entries.map((e) => e.kind), unorderedEquals([EntryKind.academy, EntryKind.afterSchool]));
+    });
+
+    test('기간을 정한 방학은 지금 쓰는 시간표를 바꾸지 않고, 그 기간에만 저절로 쓰인다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final term = await versionById(child.currentVersionId!);
+      final vac = await repo.createVersion(
+        child,
+        '2학년 겨울방학',
+        kind: VersionKind.vacation,
+        startDate: DateTime(2026, 12, 26),
+        endDate: DateTime(2027, 2, 28),
+      );
+      final c = await childNow(child.id);
+      expect(c.currentVersionId, term.id, reason: '골라 둔 학기 시간표는 그대로');
+
+      final all = (await store.read(Collections.versions)).values.map(TimetableVersion.fromJson).toList();
+      expect(effectiveVersion(c, all, DateTime(2026, 12, 25))!.id, term.id);
+      expect(effectiveVersion(c, all, DateTime(2026, 12, 26))!.id, vac.id, reason: '시작일 포함');
+      expect(effectiveVersion(c, all, DateTime(2027, 2, 28, 23, 59))!.id, vac.id, reason: '끝날 밤까지 포함');
+      expect(effectiveVersion(c, all, DateTime(2027, 3, 2))!.id, term.id, reason: '방학 끝나면 학기로 돌아옴');
+    });
+
+    test('기간 없는 방학은 만들자마자 지금 쓰는 시간표가 된다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final vac = await repo.createVersion(child, '2학년 여름방학', kind: VersionKind.vacation);
+      expect((await childNow(child.id)).currentVersionId, vac.id);
+    });
+
+    test('기간을 나중에 정하거나 지울 수 있다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final vac = await repo.createVersion(child, '2학년 여름방학', kind: VersionKind.vacation);
+      await repo.setVersionPeriod(vac, DateTime(2027, 7, 21), DateTime(2027, 8, 18));
+      var saved = await versionById(vac.id);
+      expect(saved.covers(DateTime(2027, 8, 1)), isTrue);
+      await repo.setVersionPeriod(saved, null, null);
+      saved = await versionById(vac.id);
+      expect(saved.hasPeriod, isFalse);
+    });
+  });
+
+  test('시간표 종류: 저장값이 없던 옛 데이터는 이름으로 짐작한다', () {
+    final base = {'id': 'v', 'childId': 'c', 'entries': <Object>[]};
+    expect(TimetableVersion.fromJson({...base, 'name': '2학년 여름방학'}).kind, VersionKind.vacation);
+    expect(TimetableVersion.fromJson({...base, 'name': '2학년 2학기'}).kind, VersionKind.term);
+    expect(TimetableVersion.fromJson({...base, 'name': '방학', 'kind': 'term'}).kind, VersionKind.term, reason: '저장값 우선');
+  });
+
+  test('방학 기간은 날짜만 저장한다(시간대로 하루 밀리지 않게)', () {
+    final v = TimetableVersion(
+      id: 'v',
+      childId: 'c',
+      name: '여름방학',
+      kind: VersionKind.vacation,
+      startDate: DateTime(2027, 7, 21),
+      endDate: DateTime(2027, 8, 18),
+      entries: const [],
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    final j = v.toJson();
+    expect(j['startDate'], '2027-07-21');
+    expect(TimetableVersion.fromJson(j).endDate, DateTime(2027, 8, 18));
   });
 
   test('수정 기록은 버전마다 최대 개수까지만 남는다', () async {

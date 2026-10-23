@@ -49,14 +49,28 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // 가족 데이터의 저장 형식 버전을 이 앱 기준으로 맞춘다(처음이면 만들고, 옛 버전이면 올린다).
     Future.microtask(() => ref.read(repositoryProvider).initFamily());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 앱이 다시 앞으로 나오면 "오늘"을 새로 고친다. 방학 시작·끝날을 넘기며 켜 둔 앱도
+  /// 맞는 시간표(방학/학기)를 보여주게.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) ref.read(todayProvider.notifier).state = DateTime.now();
   }
 
   @override
