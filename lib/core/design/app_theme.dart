@@ -11,14 +11,17 @@ import 'tokens.dart';
 class AppFonts {
   AppFonts._();
 
-  static String? get body => GoogleFonts.notoSansKr().fontFamily;
+  /// 위젯 테스트에서 끈다. 테스트 환경은 인터넷 글꼴을 받을 수 없어서, 켜 두면 글꼴 내려받기
+  /// 실패가 테스트 실패로 번진다. 앱에서는 건드리지 않는다.
+  static bool useGoogleFonts = true;
 
-  static TextStyle numeric({double? size, FontWeight weight = FontWeight.w300, Color? color}) => GoogleFonts.poppins(
-    fontSize: size,
-    fontWeight: weight,
-    color: color,
-    height: 1.1,
-  ).copyWith(fontFamilyFallback: [?body]);
+  static String? get body => useGoogleFonts ? GoogleFonts.notoSansKr().fontFamily : null;
+
+  static TextStyle numeric({double? size, FontWeight weight = FontWeight.w300, Color? color}) {
+    final base = TextStyle(fontSize: size, fontWeight: weight, color: color, height: 1.1);
+    if (!useGoogleFonts) return base;
+    return GoogleFonts.poppins(textStyle: base).copyWith(fontFamilyFallback: [?body]);
+  }
 }
 
 ThemeData buildLightTheme() => _buildTheme(Brightness.light, AppPalette.light);

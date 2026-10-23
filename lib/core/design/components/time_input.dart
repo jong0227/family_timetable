@@ -26,6 +26,9 @@ class TimeInputField extends StatefulWidget {
   final FocusNode? nextFocus;
   final FocusNode? focusNode;
 
+  /// 밖에서 값을 정할 때마다 1씩 올린다(길이 칩, 교시 선택). 값이 그대로여도 칸을 새로 맞춘다.
+  final int externalRevision;
+
   const TimeInputField({
     super.key,
     required this.label,
@@ -33,6 +36,7 @@ class TimeInputField extends StatefulWidget {
     required this.onChanged,
     this.nextFocus,
     this.focusNode,
+    this.externalRevision = 0,
   });
 
   @override
@@ -56,10 +60,16 @@ class _TimeInputFieldState extends State<TimeInputField> {
   @override
   void didUpdateWidget(TimeInputField old) {
     super.didUpdateWidget(old);
-    // 밖에서 값이 바뀌면(교시 선택, 시작을 옮겨 끝이 따라 옮겨짐, 길이 칩, 휠) 보이는 글자도 맞춘다.
-    // 포커스 여부가 아니라 "사용자가 치는 중인가"로 판단한다: 시작을 다 치면 끝 칸으로 포커스가 먼저
-    // 넘어온 뒤 끝 값이 바뀌므로, 포커스로 막으면 끝 칸에 옛 시각이 남는다(실기기 피드백 후 발견).
-    if (old.minutes != widget.minutes && !_dirty) {
+    // 밖에서 값을 정하면(교시 선택, 시작을 옮겨 끝이 따라 옮겨짐, 길이 칩, 휠) **항상 밖이 이긴다**.
+    // 치다 만 숫자는 버리고 보이는 글자를 새 값으로 맞춘다.
+    //
+    // 예전엔 "사용자가 치는 중(_dirty)이면 무시"했는데, 실기기에서 끝 칸에 커서만 둬도 삼성 키보드가
+    // 글자를 다시 보내 "치는 중"이 되어 길이 칩(50분·1시간)이 먹지 않았다(실사용 피드백).
+    // 밖에서 값을 바꾸는 건 전부 사용자가 일부러 누른 동작이라, 그쪽을 믿는 게 맞다.
+    // [externalRevision]은 값이 같아도(이미 1시간인데 1시간 칩을 또 누름) 덮어쓰게 하는 신호다.
+    if (old.minutes != widget.minutes || old.externalRevision != widget.externalRevision) {
+      _dirty = false;
+      _invalid = false;
       _controller.text = formatMinutes(widget.minutes);
       if (_focus.hasFocus) _selectAll();
     }

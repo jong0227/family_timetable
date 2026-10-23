@@ -40,7 +40,9 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
   late final _title = TextEditingController(text: _original?.title ?? '');
   late final _place = TextEditingController(text: _original?.place ?? '');
   late final _memo = TextEditingController(text: _original?.memo ?? '');
-  late Set<int> _days = {_original?.weekday ?? widget.weekday ?? DateTime.now().weekday.clamp(1, 5)};
+  // 새 일정은 요일을 미리 고르지 않는다(오늘 요일이 미리 켜져 있으면 모르고 그대로 저장되기 쉽다 —
+  // 실사용 피드백). 격자의 요일 머리를 눌러 들어온 경우에만 그 요일을 켜 둔다.
+  late Set<int> _days = {if (_original != null) _original.weekday else if (widget.weekday != null) widget.weekday!};
   late int? _period = _original?.period;
   late int _start = _original?.start ?? 15 * 60;
   late int _end = _original?.end ?? 16 * 60;
@@ -51,6 +53,8 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
   bool get _usesPeriods =>
       _kind == EntryKind.school && widget.child.institution.hasPeriods && !widget.version.isVacation;
 
+  /// 칩·교시로 시간을 정할 때마다 올려서, 입력 칸이 치다 만 글자를 버리고 새 값을 보이게 한다.
+  int _timeRevision = 0;
   final _startFocus = FocusNode();
   final _endFocus = FocusNode();
 
@@ -125,6 +129,7 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                     final (s, e) = defaultPeriodTime(widget.child.institution, v);
                     _start = s;
                     _end = e;
+                    _timeRevision++;
                   }
                 }),
               ),
@@ -139,6 +144,7 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                     minutes: _start,
                     focusNode: _startFocus,
                     nextFocus: _endFocus,
+                    externalRevision: _timeRevision,
                     onChanged: (m) => setState(() => _setStart(m)),
                   ),
                 ),
@@ -148,6 +154,7 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                     label: '끝',
                     minutes: _end,
                     focusNode: _endFocus,
+                    externalRevision: _timeRevision,
                     onChanged: (m) => setState(() => _end = m),
                   ),
                 ),
@@ -167,7 +174,10 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                           len < 60 ? '$len분' : (len % 60 == 0 ? '${len ~/ 60}시간' : '${len ~/ 60}시간 ${len % 60}분'),
                         ),
                         selected: _end - _start == len,
-                        onSelected: (_) => setState(() => _end = (_start + len).clamp(0, 24 * 60 - 1)),
+                        onSelected: (_) => setState(() {
+                          _end = (_start + len).clamp(0, 24 * 60 - 1);
+                          _timeRevision++;
+                        }),
                       ),
                     ),
                 ],
@@ -219,7 +229,13 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                 Expanded(
                   child: FilledButton(
                     onPressed: _saving || _end <= _start || _days.isEmpty ? null : _save,
-                    child: Text(_editing ? '저장' : (_days.length > 1 ? '${_days.length}개 요일에 추가' : '추가')),
+                    child: Text(
+                      _editing
+                          ? '저장'
+                          : _days.isEmpty
+                          ? '요일을 골라 주세요'
+                          : (_days.length > 1 ? '${_days.length}개 요일에 추가' : '추가'),
+                    ),
                   ),
                 ),
               ],
