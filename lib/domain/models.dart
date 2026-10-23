@@ -38,6 +38,10 @@ enum MemberRole {
 
 enum EntryKind {
   school('학교', '🏫'),
+
+  /// 학교 방과후 수업(로봇, 바이올린…). 학교 안이지만 교시가 아니라 시간으로 잡는다.
+  /// 스키마 v2에서 추가 — 옛 앱은 이 값을 모른다(family_store.dart kSchemaVersion 참고).
+  afterSchool('방과후', '🎨'),
   academy('학원', '📚'),
   activity('활동', '⚽'),
   care('돌봄', '🧸'),

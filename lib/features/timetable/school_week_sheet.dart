@@ -195,14 +195,10 @@ class _PeriodRow extends StatelessWidget {
         InkWell(
           borderRadius: BorderRadius.circular(AppRadius.sm),
           onTap: () async {
-            final t = await showTimePicker(
-              context: context,
-              initialTime: TimeOfDay(hour: row.start ~/ 60, minute: row.start % 60),
-              initialEntryMode: TimePickerEntryMode.input,
-            );
+            final t = await showTimeWheel(context, initial: row.start, title: '$period교시 시작');
             if (t == null) return;
             final len = row.end - row.start;
-            row.start = t.hour * 60 + t.minute;
+            row.start = t;
             row.end = row.start + len;
             onTimeChanged();
           },

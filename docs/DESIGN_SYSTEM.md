@@ -72,6 +72,7 @@
 | `InfoBanner` | 화면 위 상태 알림 띠 |
 | `ChildBadge` | 자녀 표시(점 + 이름) — 자녀가 나오는 모든 곳 |
 | `KindTag` | 일정 종류(이모지 + 글자) |
+| `TimeInputField` / `showTimeWheel` | 시간 입력 — 숫자만 치면 콜론 자동·다음 칸 자동, 시계 아이콘으로 5분 단위 휠. **시간 입력은 이것만 쓴다** (Material 시간 선택기 금지: 시·분 칸을 따로 눌러야 하고 드래그가 안 된다는 실사용 피드백) |
 | `confirmDialog` / `showToast` | 확인 / 결과 알림 |
 
 기능 안에서만 쓰는 조립 위젯은 그 기능 폴더의 `widgets/`에 둔다. 예: `features/timetable/widgets/` 의

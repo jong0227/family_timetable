@@ -29,8 +29,16 @@ class TimetableRepository {
   // ── 가족 ───────────────────────────────────────────────
 
   /// 새 가족 데이터의 첫 기록(스키마 버전). 이미 있으면 건드리지 않는다.
+  /// 앱을 켤 때마다 부른다. 처음이면 만들고, 이 앱이 더 새 형식이면 버전을 올린다
+  /// (옛 앱이 새 데이터를 덮어쓰지 않게 — ARCHITECTURE 3장 "데이터 마이그레이션").
+  /// 더 새 앱이 이미 올려 놓은 버전은 절대 내리지 않는다.
   Future<void> initFamily() async {
-    if (await store.readMeta() == null) await store.writeMeta(FamilyMeta.current());
+    final meta = await store.readMeta();
+    if (meta == null) {
+      await store.writeMeta(FamilyMeta.current());
+    } else if (meta.schemaVersion < kSchemaVersion) {
+      await store.writeMeta(FamilyMeta(schemaVersion: kSchemaVersion, createdAt: meta.createdAt));
+    }
   }
 
   // ── 회원 ───────────────────────────────────────────────

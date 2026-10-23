@@ -53,6 +53,13 @@ class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // 가족 데이터의 저장 형식 버전을 이 앱 기준으로 맞춘다(처음이면 만들고, 옛 버전이면 올린다).
+    Future.microtask(() => ref.read(repositoryProvider).initFamily());
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final meta = ref.watch(familyMetaProvider).valueOrNull;

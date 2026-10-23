@@ -131,6 +131,24 @@ void main() {
     expect((await revisionsOf(v.id)).first.summary, '피아노·태권도 추가');
   });
 
+  test('스키마 버전: 옛 버전이면 올리고, 더 새 버전은 내리지 않는다', () async {
+    await store.writeMeta(FamilyMeta(schemaVersion: 1, createdAt: DateTime(2026)));
+    await repo.initFamily();
+    final upgraded = (await store.readMeta())!;
+    expect(upgraded.schemaVersion, kSchemaVersion);
+    expect(upgraded.createdAt, DateTime(2026), reason: '만든 날은 유지');
+
+    await store.writeMeta(FamilyMeta(schemaVersion: kSchemaVersion + 1, createdAt: DateTime(2026)));
+    await repo.initFamily();
+    expect((await store.readMeta())!.schemaVersion, kSchemaVersion + 1);
+  });
+
+  test('방과후 종류는 저장했다 읽어도 그대로, 모르는 종류는 기타', () {
+    final e = piano().copyWith(kind: EntryKind.afterSchool, title: '로봇');
+    expect(Entry.fromJson(e.toJson()).kind, EntryKind.afterSchool);
+    expect(Entry.fromJson({...e.toJson(), 'kind': 'futureKind'}).kind, EntryKind.etc);
+  });
+
   test('수정 기록은 버전마다 최대 개수까지만 남는다', () async {
     final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
     var v = await versionById(child.currentVersionId!);

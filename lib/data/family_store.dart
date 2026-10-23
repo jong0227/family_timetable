@@ -39,7 +39,12 @@ abstract class FamilyStore {
 ///
 /// 가족 중 한 명만 앱을 업데이트한 상태에서, 옛 앱이 새 형식 데이터를 모르고 덮어써
 /// 망가뜨리는 걸 막는 게 목적이다. 옛 앱은 자기보다 높은 버전을 보면 읽기 전용이 된다.
-const kSchemaVersion = 1;
+///
+/// 이력:
+/// - v1 (2026-10-23) 처음
+/// - v2 (2026-10-23) 일정 종류에 `afterSchool`(학교 방과후) 추가. v1 앱은 이걸 '기타'로 읽고,
+///   그 상태로 고쳐 저장하면 방과후가 기타로 바뀌어 버린다 → 그래서 버전을 올려 옛 앱에 업데이트 안내.
+const kSchemaVersion = 2;
 
 class FamilyMeta {
   final int schemaVersion;

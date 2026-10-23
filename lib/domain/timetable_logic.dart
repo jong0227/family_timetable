@@ -155,7 +155,8 @@ List<String> titleSuggestions(EntryKind kind, Institution inst) => switch (kind)
     _ => ['특별활동'],
   },
   EntryKind.academy => ['피아노', '영어', '수학', '미술', '논술', '코딩', '과학'],
-  EntryKind.activity => ['태권도', '수영', '축구', '줄넘기', '발레', '방과후'],
+  EntryKind.afterSchool => ['로봇', '코딩', '바이올린', '방송댄스', '주산', '과학실험', '바둑', '요리', '영어', '음악줄넘기'],
+  EntryKind.activity => ['태권도', '수영', '축구', '줄넘기', '발레'],
   EntryKind.care => ['어린이집', '유치원', '돌봄교실', '지역아동센터'],
   EntryKind.etc => ['병원', '상담'],
 };

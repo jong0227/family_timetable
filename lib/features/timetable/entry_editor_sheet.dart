@@ -49,8 +49,13 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
   bool get _editing => _original != null;
   bool get _usesPeriods => _kind == EntryKind.school && widget.child.institution.hasPeriods;
 
+  final _startFocus = FocusNode();
+  final _endFocus = FocusNode();
+
   @override
   void dispose() {
+    _startFocus.dispose();
+    _endFocus.dispose();
     _title.dispose();
     _place.dispose();
     _memo.dispose();
@@ -127,13 +132,44 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
             Row(
               children: [
                 Expanded(
-                  child: _TimeField(label: '시작', minutes: _start, onPick: (m) => setState(() => _setStart(m))),
+                  child: TimeInputField(
+                    label: '시작',
+                    minutes: _start,
+                    focusNode: _startFocus,
+                    nextFocus: _endFocus,
+                    onChanged: (m) => setState(() => _setStart(m)),
+                  ),
                 ),
                 const SizedBox(width: AppGap.md),
                 Expanded(
-                  child: _TimeField(label: '끝', minutes: _end, onPick: (m) => setState(() => _end = m)),
+                  child: TimeInputField(
+                    label: '끝',
+                    minutes: _end,
+                    focusNode: _endFocus,
+                    onChanged: (m) => setState(() => _end = m),
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppGap.sm),
+            // 끝 시각은 대개 "몇 분짜리"로 정하는 게 빠르다(학원 50분, 태권도 1시간).
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final len in const [30, 40, 50, 60, 90, 120])
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppGap.snug),
+                      child: ChoiceChip(
+                        label: Text(
+                          len < 60 ? '$len분' : (len % 60 == 0 ? '${len ~/ 60}시간' : '${len ~/ 60}시간 ${len % 60}분'),
+                        ),
+                        selected: _end - _start == len,
+                        onSelected: (_) => setState(() => _end = (_start + len).clamp(0, 24 * 60 - 1)),
+                      ),
+                    ),
+                ],
+              ),
             ),
             if (_end <= _start) ...[
               const SizedBox(height: AppGap.sm),
@@ -300,47 +336,6 @@ class _WeekdayPicker extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _TimeField extends StatelessWidget {
-  final String label;
-  final int minutes;
-  final ValueChanged<int> onPick;
-
-  const _TimeField({required this.label, required this.minutes, required this.onPick});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Material(
-      color: p.surfaceMuted,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: () async {
-          final t = await showTimePicker(
-            context: context,
-            initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
-            initialEntryMode: TimePickerEntryMode.input,
-          );
-          if (t != null) onPick(t.hour * 60 + t.minute);
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
-              ),
-              TimeText(formatMinutes(minutes), size: AppText.numSm, weight: FontWeight.w400),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
