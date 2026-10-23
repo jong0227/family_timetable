@@ -293,13 +293,23 @@ class _CommentInputState extends ConsumerState<_CommentInput> {
 
   Future<void> _send() async {
     final me = ref.read(meProvider);
-    if (me == null || _controller.text.trim().isEmpty) return;
-    setState(() => _sending = true);
-    await ref
-        .read(repositoryProvider)
-        .addComment(version: widget.version, entry: widget.entry, author: me, text: _controller.text);
+    // 보낼 글을 먼저 잡고 칸부터 비운다. 기다리는 사이 이어서 친 글까지 지워지지 않게(코드 점검 M6).
+    final text = _controller.text;
+    if (me == null || text.trim().isEmpty) return;
     _controller.clear();
-    if (mounted) setState(() => _sending = false);
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(repositoryProvider)
+          .addComment(version: widget.version, entry: widget.entry, author: me, text: text);
+    } catch (e) {
+      if (mounted) {
+        _controller.text = text;
+        showToast(context, '댓글을 남기지 못했어요');
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override

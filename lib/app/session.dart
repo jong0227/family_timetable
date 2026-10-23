@@ -54,6 +54,9 @@ class SessionController extends Notifier<Session> {
         await remote.put(collection, id, doc);
       }
     }
+    // 올렸으면 이 폰의 로컬 사본은 비운다. 남겨 두면 나중에 가족에서 나와 "새로 시작"할 때 옛 회원·아이가
+    // 새 가족 데이터에 섞여 올라간다(코드 점검 M4). Firestore가 이 폰 캐시에 이미 갖고 있어 화면은 그대로다.
+    await local.clear();
     await _setFamily(code);
     return code;
   }

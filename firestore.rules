@@ -14,7 +14,10 @@ service cloud.firestore {
     // 가족 코드(6자리)를 아는 로그인 사용자(익명 포함)만 그 가족 문서와 하위 컬렉션을 읽고 쓴다.
     // 가족 코드가 사실상의 비밀번호다(Moneycraft와 같은 수준). 공개 배포 전 강화: ROADMAP M4.
     match /timetable_families/{familyCode} {
-      allow read, write: if request.auth != null;
+      // get만 허용하고 list(컬렉션 조회)는 막는다. read에는 list가 포함돼서, 예전 규칙으로는 익명 로그인한
+      // 누구나 timetable_families 전체를 조회해 모든 가족 코드·아이 정보를 볼 수 있었다(코드 점검 C1, 2026-10-23).
+      // 앱은 코드로 가족 문서를 직접 열기만 하므로 list가 필요 없다.
+      allow get, write: if request.auth != null;
 
       match /{collection}/{docId} {
         allow read, write: if request.auth != null

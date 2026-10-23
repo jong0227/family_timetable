@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:family_timetable/data/family_store.dart';
 import 'package:family_timetable/data/timetable_repository.dart';
 import 'package:family_timetable/domain/models.dart';
@@ -76,7 +78,7 @@ void main() {
     child = Child.fromJson((await store.read(Collections.children))[child.id]!);
     expect(child.currentVersionId, newer.id);
 
-    await repo.deleteVersion(child, newer, [older, newer]);
+    await repo.deleteVersion(child, newer);
     child = Child.fromJson((await store.read(Collections.children))[child.id]!);
     expect(child.currentVersionId, older.id);
   });
@@ -277,6 +279,80 @@ void main() {
       expect(Permissions(dad).canDeleteComment(c), isTrue);
       expect(Permissions(other).canDeleteComment(c), isFalse);
     });
+  });
+
+  group('코드 점검 재현', () {
+    test('H3: 시트를 연 사이 다른 가족이 추가한 일정이 내 저장으로 사라지지 않는다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final opened = await repo.upsertEntry(await versionById(child.currentVersionId!), piano()); // 엄마가 시트를 연 시점
+      await repo.addEntries(opened, [piano().copyWith(id: '', title: '태권도', weekday: 3)]); // 그사이 아빠가 추가
+      final after = await repo.upsertEntry(opened, piano().copyWith(start: 930)); // 엄마가 옛 화면으로 저장
+      expect(after.entries.map((e) => e.title), containsAll(['피아노', '태권도']));
+      expect((await versionById(opened.id)).entries, hasLength(2));
+    });
+
+    test('H2: 이름·기간을 바꿔도 그사이 추가된 일정이 지워지지 않는다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final stale = await versionById(child.currentVersionId!);
+      await repo.upsertEntry(stale, piano());
+      await repo.renameVersion(stale, '2학년 2학기(수정)');
+      final saved = await versionById(stale.id);
+      expect(saved.name, '2학년 2학기(수정)');
+      expect(saved.entries, hasLength(1));
+    });
+
+    test('H2: 아이 정보를 고쳐도 그사이 바뀐 "지금 쓰는 시간표"를 되돌리지 않는다', () async {
+      final stale = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final next = await repo.createVersion(stale, '3학년 1학기');
+      await repo.updateChildInfo(
+        stale,
+        name: '이서원',
+        institution: Institution.elementary,
+        grade: 3,
+        schoolName: '',
+        colorIndex: 0,
+      );
+      final c = Child.fromJson((await store.read(Collections.children))[stale.id]!);
+      expect(c.name, '이서원');
+      expect(c.currentVersionId, next.id);
+    });
+
+    test('H5: 기간 없이 만든 방학에 나중에 기간을 정하면, 방학이 끝난 뒤 학기로 돌아온다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final term = await versionById(child.currentVersionId!);
+      final vac = await repo.createVersion(child, '2학년 여름방학', kind: VersionKind.vacation);
+      await repo.setVersionPeriod(vac, DateTime(2027, 7, 21), DateTime(2027, 8, 18));
+      final c = Child.fromJson((await store.read(Collections.children))[child.id]!);
+      final all = (await store.read(Collections.versions)).values.map(TimetableVersion.fromJson).toList();
+      expect(effectiveVersion(c, all, DateTime(2027, 8, 1))!.id, vac.id);
+      expect(effectiveVersion(c, all, DateTime(2027, 8, 19))!.id, term.id);
+    });
+
+    test('M1: 교시 입력에서 한 교시만 고쳐도 다른 교시의 id(댓글 연결)는 그대로', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      var v = await repo.replaceSchoolWeek(await versionById(child.currentVersionId!), {
+        1: [(subject: '국어', start: 540, end: 580), (subject: '수학', start: 590, end: 630)],
+      });
+      final mathId = v.entries.firstWhere((e) => e.title == '수학').id;
+      v = await repo.replaceSchoolWeek(v, {
+        1: [(subject: '음악', start: 540, end: 580), (subject: '수학', start: 590, end: 630)],
+      });
+      expect(v.entries.firstWhere((e) => e.title == '수학').id, mathId);
+    });
+  });
+
+  test('M3: 깨진 로컬 파일은 지우지 않고 옆으로 빼 둔 뒤 빈 상태로 시작한다', () async {
+    final dir = await Directory.systemTemp.createTemp('ft_store_');
+    final file = File('${dir.path}/local_family.json');
+    await file.writeAsString('{"members": {"m1": {"id":'); // 쓰다 만 파일
+    final s = await LocalFamilyStore.open(file);
+    expect(s.isEmpty, isTrue);
+    expect(s.recoveredFrom, isNotNull);
+    expect(await File(s.recoveredFrom!).readAsString(), startsWith('{"members"'));
+    await s.put(Collections.members, 'm2', {'id': 'm2', 'name': '아빠'});
+    final reopened = await LocalFamilyStore.open(file);
+    expect((await reopened.read(Collections.members)).keys, ['m2']);
+    await dir.delete(recursive: true);
   });
 
   test('수정 기록은 버전마다 최대 개수까지만 남는다', () async {

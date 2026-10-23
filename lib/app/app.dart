@@ -8,6 +8,7 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/timetable/timetable_screen.dart';
 import '../features/today/today_screen.dart';
 import '../features/update/update_sheet.dart';
+import 'bootstrap.dart';
 import 'providers.dart';
 import 'session.dart';
 
@@ -57,8 +58,15 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 가족 데이터의 저장 형식 버전을 이 앱 기준으로 맞춘다(처음이면 만들고, 옛 버전이면 올린다).
-    Future.microtask(() => ref.read(repositoryProvider).initFamily());
+    Future.microtask(() {
+      // 가족 데이터의 저장 형식 버전을 이 앱 기준으로 맞춘다(처음이면 만들고, 옛 버전이면 올린다).
+      // 이 폰이 더 옛 앱이면(읽기 전용) 건드리지 않는다.
+      ref.read(repositoryProvider).initFamily();
+      final recovered = ref.read(bootstrapProvider).localStore.recoveredFrom;
+      if (recovered != null && mounted) {
+        showToast(context, '이 폰에 저장된 파일이 손상돼 따로 보관하고 새로 시작했어요');
+      }
+    });
   }
 
   @override
@@ -77,6 +85,10 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    // 뒤에서 올리다 실패한 저장은 조용히 사라지지 않게 알려준다(코드 점검 M6).
+    ref.listen(writeErrorsProvider, (_, next) {
+      if (next.hasValue) showToast(context, '가족과 공유하지 못한 변경이 있어요. 인터넷 연결을 확인해 주세요');
+    });
     final meta = ref.watch(familyMetaProvider).valueOrNull;
     final wide = Breakpoint.of(context) == Breakpoint.expanded;
     final update = ref.watch(availableUpdateProvider).valueOrNull;

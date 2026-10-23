@@ -143,6 +143,7 @@ class _PickMemberState extends ConsumerState<_PickMember> {
   final _name = TextEditingController();
   MemberRole _role = MemberRole.parent;
   String? _childId;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -201,7 +202,7 @@ class _PickMemberState extends ConsumerState<_PickMember> {
                   ),
                 ],
                 const SizedBox(height: AppGap.lg),
-                FilledButton(onPressed: _register, child: const Text('등록')),
+                FilledButton(onPressed: _busy ? null : _register, child: const Text('등록')),
               ],
             ),
           ),
@@ -214,7 +215,14 @@ class _PickMemberState extends ConsumerState<_PickMember> {
     final name = _name.text.trim();
     if (name.isEmpty) return showToast(context, '호칭을 적어 주세요');
     if (_role == MemberRole.child && _childId == null) return showToast(context, '어느 아이인지 골라 주세요');
-    final m = await ref.read(repositoryProvider).addMember(name, _role, childId: _childId);
-    await ref.read(sessionProvider.notifier).setMember(m.id);
+    // 연타로 같은 회원이 여러 번 생기지 않게(코드 점검 H1).
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final m = await ref.read(repositoryProvider).addMember(name, _role, childId: _childId);
+      await ref.read(sessionProvider.notifier).setMember(m.id);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

@@ -20,6 +20,10 @@ class Collections {
 /// 데이터를 어디에 두든(이 폰의 파일 / Firestore 가족 문서) 화면과 로직은 이
 /// 인터페이스만 본다. 덕분에 Firebase 설정 전에도 앱을 혼자 써 볼 수 있고,
 /// 나중에 "가족 공유 시작"을 누르면 로컬 데이터를 그대로 올리기만 하면 된다.
+///
+/// **쓰기는 기다리지 않는다**: put/update/remove는 이 폰에 바로 반영되고 끝난다. 서버(가족 폰)로
+/// 올라가는 건 뒤에서 이뤄지고, 실패하면 [writeErrors]로 알린다. Firestore의 쓰기 Future는 서버가
+/// 확인해야 끝나서, 기다리면 오프라인에서 저장 버튼이 영원히 멈췄다(코드 점검 H1).
 abstract class FamilyStore {
   /// 컬렉션 전체를 id → 문서 맵으로 계속 흘려준다(바뀔 때마다 새 값).
   Stream<Map<String, Map<String, dynamic>>> watch(String collection);
@@ -27,21 +31,36 @@ abstract class FamilyStore {
   /// 지금 값 한 번만.
   Future<Map<String, Map<String, dynamic>>> read(String collection);
 
+  /// 문서 하나의 지금 값(없으면 null). 고치기 직전에 최신 상태를 다시 읽을 때 쓴다(코드 점검 H2·H3).
+  Future<Map<String, dynamic>?> get(String collection, String id);
+
+  /// 문서를 통째로 쓴다.
   Future<void> put(String collection, String id, Map<String, dynamic> doc);
+
+  /// 주어진 필드만 바꾼다(나머지 필드는 그대로). 이름·기간·현재 버전처럼 일부만 바꿀 땐 이걸 써야
+  /// 그사이 다른 가족이 바꾼 일정 목록을 옛 값으로 덮지 않는다.
+  Future<void> update(String collection, String id, Map<String, dynamic> fields);
 
   Future<void> remove(String collection, String id);
 
   /// 가족 단위 정보(스키마 버전, 만든 날). 문서가 없으면 null.
   Future<FamilyMeta?> readMeta();
 
+  /// 스키마 버전을 계속 지켜본다(다른 폰이 앱을 업데이트하면 바로 읽기 전용으로 — 코드 점검 H4).
+  Stream<FamilyMeta?> watchMeta();
+
   Future<void> writeMeta(FamilyMeta meta);
+
+  /// 뒤에서 올리다가 실패한 쓰기(권한 거부 등).
+  Stream<Object> get writeErrors;
 }
 
 /// 저장 형식 버전. 문서 모양을 바꾸면(필드 의미 변경·컬렉션 추가 등) 1 올리고
 /// `docs/ARCHITECTURE.md`의 "데이터 마이그레이션" 절차를 따른다.
 ///
 /// 가족 중 한 명만 앱을 업데이트한 상태에서, 옛 앱이 새 형식 데이터를 모르고 덮어써
-/// 망가뜨리는 걸 막는 게 목적이다. 옛 앱은 자기보다 높은 버전을 보면 읽기 전용이 된다.
+/// 망가뜨리는 걸 막는 게 목적이다. 옛 앱은 자기보다 높은 버전을 보면 읽기 전용이 된다
+/// ([Permissions.readOnly]).
 ///
 /// 이력:
 /// - v1 (2026-10-23) 처음
@@ -80,7 +99,15 @@ class LocalFamilyStore implements FamilyStore {
   final File? file;
   final Map<String, Map<String, Map<String, dynamic>>> _data = {for (final c in Collections.all) c: {}};
   final _controllers = <String, StreamController<Map<String, Map<String, dynamic>>>>{};
+  final _metaController = StreamController<FamilyMeta?>.broadcast();
+  final _errors = StreamController<Object>.broadcast();
   Map<String, dynamic>? _meta;
+
+  /// 파일 쓰기를 한 줄로 세운다(두 저장이 겹쳐 파일이 섞이지 않게).
+  Future<void> _writing = Future.value();
+
+  /// 열 때 파일이 깨져 있어서 옆으로 빼 두고 빈 상태로 시작했으면 그 백업 파일 경로.
+  String? recoveredFrom;
 
   LocalFamilyStore._(this.file);
 
@@ -91,20 +118,23 @@ class LocalFamilyStore implements FamilyStore {
     if (await file.exists()) {
       try {
         final raw = jsonDecode(await file.readAsString());
-        if (raw is Map) {
-          for (final c in Collections.all) {
-            final col = raw[c];
-            if (col is Map) {
-              store._data[c] = {
-                for (final e in col.entries)
-                  if (e.value is Map) e.key as String: Map<String, dynamic>.from(e.value as Map),
-              };
-            }
+        if (raw is! Map) throw const FormatException('not a map');
+        for (final c in Collections.all) {
+          final col = raw[c];
+          if (col is Map) {
+            store._data[c] = {
+              for (final e in col.entries)
+                if (e.value is Map) e.key as String: Map<String, dynamic>.from(e.value as Map),
+            };
           }
-          if (raw['meta'] is Map) store._meta = Map<String, dynamic>.from(raw['meta'] as Map);
         }
+        if (raw['meta'] is Map) store._meta = Map<String, dynamic>.from(raw['meta'] as Map);
       } catch (_) {
-        // 파일이 깨졌으면 빈 상태로 시작한다. 앱이 아예 안 켜지는 것보다 낫다.
+        // 깨진 파일은 지우지 않고 옆으로 빼 둔다. 예전엔 빈 상태로 시작한 뒤 첫 저장에서 원본을 덮어써
+        // 로컬 모드 사용자의 데이터가 영영 사라졌다(코드 점검 M3).
+        final backup = '${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}';
+        await file.rename(backup);
+        store.recoveredFrom = backup;
       }
     }
     return store;
@@ -130,8 +160,22 @@ class LocalFamilyStore implements FamilyStore {
   Future<Map<String, Map<String, dynamic>>> read(String collection) async => Map.of(_data[collection]!);
 
   @override
+  Future<Map<String, dynamic>?> get(String collection, String id) async {
+    final d = _data[collection]![id];
+    return d == null ? null : Map.of(d);
+  }
+
+  @override
   Future<void> put(String collection, String id, Map<String, dynamic> doc) async {
     _data[collection]![id] = doc;
+    await _changed(collection);
+  }
+
+  @override
+  Future<void> update(String collection, String id, Map<String, dynamic> fields) async {
+    final cur = _data[collection]![id];
+    if (cur == null) return;
+    _data[collection]![id] = {...cur, ...fields};
     await _changed(collection);
   }
 
@@ -145,21 +189,41 @@ class LocalFamilyStore implements FamilyStore {
   Future<FamilyMeta?> readMeta() async => FamilyMeta.fromJson(_meta);
 
   @override
+  Stream<FamilyMeta?> watchMeta() async* {
+    yield FamilyMeta.fromJson(_meta);
+    yield* _metaController.stream;
+  }
+
+  @override
   Future<void> writeMeta(FamilyMeta meta) async {
     _meta = meta.toJson();
+    _metaController.add(meta);
     await _persist();
   }
+
+  @override
+  Stream<Object> get writeErrors => _errors.stream;
 
   Future<void> _changed(String collection) async {
     _controller(collection).add(Map.of(_data[collection]!));
     await _persist();
   }
 
-  Future<void> _persist() async {
+  /// 임시 파일에 다 쓴 뒤 이름을 바꿔 한 번에 갈아 끼운다. 쓰다가 앱이 죽어도 원본은 멀쩡하다.
+  Future<void> _persist() {
     final f = file;
-    if (f == null) return;
-    await f.parent.create(recursive: true);
-    await f.writeAsString(jsonEncode({..._data, 'meta': _meta}));
+    if (f == null) return Future.value();
+    final json = jsonEncode({..._data, 'meta': _meta});
+    return _writing = _writing.then((_) async {
+      try {
+        await f.parent.create(recursive: true);
+        final tmp = File('${f.path}.tmp');
+        await tmp.writeAsString(json, flush: true);
+        await tmp.rename(f.path);
+      } catch (e) {
+        _errors.add(e);
+      }
+    });
   }
 
   Future<void> clear() async {
@@ -168,6 +232,7 @@ class LocalFamilyStore implements FamilyStore {
       _data[c]!.clear();
       _controller(c).add(const {});
     }
+    await _writing;
     final f = file;
     if (f != null && await f.exists()) await f.delete();
   }
@@ -183,10 +248,18 @@ class FirestoreFamilyStore implements FamilyStore {
 
   final String familyCode;
   final FirebaseFirestore _db;
+  final _errors = StreamController<Object>.broadcast();
 
   FirestoreFamilyStore(this.familyCode, [FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
 
   DocumentReference<Map<String, dynamic>> get root => _db.collection(rootCollection).doc(familyCode);
+
+  /// 쓰기는 이 폰 캐시에 바로 반영되고(watch로 즉시 보임) 서버 확인은 기다리지 않는다.
+  /// 실패만 [writeErrors]로 넘긴다.
+  Future<void> _fire(Future<void> write) {
+    unawaited(write.catchError((Object e) => _errors.add(e)));
+    return Future.value();
+  }
 
   @override
   Stream<Map<String, Map<String, dynamic>>> watch(String collection) =>
@@ -199,15 +272,29 @@ class FirestoreFamilyStore implements FamilyStore {
   }
 
   @override
-  Future<void> put(String collection, String id, Map<String, dynamic> doc) =>
-      root.collection(collection).doc(id).set(doc);
+  Future<Map<String, dynamic>?> get(String collection, String id) async =>
+      (await root.collection(collection).doc(id).get()).data();
 
   @override
-  Future<void> remove(String collection, String id) => root.collection(collection).doc(id).delete();
+  Future<void> put(String collection, String id, Map<String, dynamic> doc) =>
+      _fire(root.collection(collection).doc(id).set(doc));
+
+  @override
+  Future<void> update(String collection, String id, Map<String, dynamic> fields) =>
+      _fire(root.collection(collection).doc(id).set(fields, SetOptions(merge: true)));
+
+  @override
+  Future<void> remove(String collection, String id) => _fire(root.collection(collection).doc(id).delete());
 
   @override
   Future<FamilyMeta?> readMeta() async => FamilyMeta.fromJson((await root.get()).data());
 
   @override
-  Future<void> writeMeta(FamilyMeta meta) => root.set(meta.toJson(), SetOptions(merge: true));
+  Stream<FamilyMeta?> watchMeta() => root.snapshots().map((s) => FamilyMeta.fromJson(s.data()));
+
+  @override
+  Future<void> writeMeta(FamilyMeta meta) => _fire(root.set(meta.toJson(), SetOptions(merge: true)));
+
+  @override
+  Stream<Object> get writeErrors => _errors.stream;
 }

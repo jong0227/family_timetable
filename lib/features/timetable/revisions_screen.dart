@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -84,7 +86,10 @@ class RevisionsScreen extends ConsumerWidget {
                 weekdays: r.entries.any((e) => e.weekday >= 6) ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5],
               ),
               const SizedBox(height: AppGap.xl),
-              if (isLatest)
+              // "가장 최근 기록"이 아니라 "지금 시간표와 내용이 같은지"로 판단한다. 동시에 고치다 기록과 실제가
+              // 어긋나면 최근 기록으로도 되돌릴 수 있어야 한다(코드 점검 H2).
+              if (jsonEncode([for (final e in r.entries) e.toJson()]) ==
+                  jsonEncode([for (final e in version.entries) e.toJson()]))
                 Text(
                   '지금 시간표가 이 상태예요.',
                   textAlign: TextAlign.center,

@@ -24,14 +24,29 @@ final storeProvider = Provider<FamilyStore>((ref) {
   return boot.localStore;
 });
 
-/// 가족 데이터의 스키마 버전 확인. 이 앱보다 새 형식이면 화면에서 읽기 전용 + 업데이트 안내.
-final familyMetaProvider = FutureProvider<FamilyMeta?>((ref) => ref.watch(storeProvider).readMeta());
+/// 가족 데이터의 스키마 버전(계속 지켜봄). 이 앱보다 새 형식이면 읽기 전용 + 업데이트 안내.
+final familyMetaProvider = StreamProvider<FamilyMeta?>((ref) => ref.watch(storeProvider).watchMeta());
+
+/// 문서들을 모델로. 모양이 이상한 문서 하나 때문에 목록 전체가 오류가 되지 않게 그 문서만 건너뛴다
+/// (예전엔 id가 빠진 문서 하나로 회원 목록이 통째로 비어 온보딩으로 빠졌다 — 코드 점검 L1).
+List<T> _parseAll<T>(Map<String, Map<String, dynamic>> docs, T Function(Map<String, dynamic>) fromJson) => [
+  for (final MapEntry(key: id, value: doc) in docs.entries)
+    if (_tryParse(() => fromJson({...doc, 'id': doc['id'] ?? id})) case final T value) value,
+];
+
+T? _tryParse<T>(T Function() parse) {
+  try {
+    return parse();
+  } catch (_) {
+    return null;
+  }
+}
 
 final membersProvider = StreamProvider<List<Member>>(
   (ref) => ref
       .watch(storeProvider)
       .watch(Collections.members)
-      .map((m) => m.values.map(Member.fromJson).toList()..sort((a, b) => a.role.index.compareTo(b.role.index))),
+      .map((m) => _parseAll(m, Member.fromJson)..sort((a, b) => a.role.index.compareTo(b.role.index))),
 );
 
 final childrenProvider = StreamProvider<List<Child>>(
@@ -40,7 +55,7 @@ final childrenProvider = StreamProvider<List<Child>>(
       .watch(Collections.children)
       .map(
         (m) =>
-            m.values.map(Child.fromJson).where((c) => !c.deleted).toList()..sort((a, b) => a.order.compareTo(b.order)),
+            _parseAll(m, Child.fromJson).where((c) => !c.deleted).toList()..sort((a, b) => a.order.compareTo(b.order)),
       ),
 );
 
@@ -50,7 +65,7 @@ final versionsProvider = StreamProvider<List<TimetableVersion>>(
       .watch(Collections.versions)
       .map(
         (m) =>
-            m.values.map(TimetableVersion.fromJson).where((v) => !v.deleted).toList()
+            _parseAll(m, TimetableVersion.fromJson).where((v) => !v.deleted).toList()
               ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
       ),
 );
@@ -62,7 +77,7 @@ final revisionsProvider = StreamProvider.family<List<Revision>, String>(
       .watch(Collections.revisions)
       .map(
         (m) =>
-            m.values.map(Revision.fromJson).where((r) => r.versionId == versionId).toList()
+            _parseAll(m, Revision.fromJson).where((r) => r.versionId == versionId).toList()
               ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
       ),
 );
@@ -76,7 +91,10 @@ final meProvider = Provider<Member?>((ref) {
   return null;
 });
 
-final permissionsProvider = Provider<Permissions>((ref) => Permissions(ref.watch(meProvider)));
+final permissionsProvider = Provider<Permissions>(
+  (ref) =>
+      Permissions(ref.watch(meProvider), readOnly: ref.watch(familyMetaProvider).valueOrNull?.isNewerThanApp ?? false),
+);
 
 final repositoryProvider = Provider<TimetableRepository>(
   (ref) => TimetableRepository(ref.watch(storeProvider), actorName: ref.watch(meProvider)?.name ?? '알 수 없음'),
@@ -86,7 +104,7 @@ final commentsProvider = StreamProvider<List<Comment>>(
   (ref) => ref
       .watch(storeProvider)
       .watch(Collections.comments)
-      .map((m) => m.values.map(Comment.fromJson).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt))),
+      .map((m) => _parseAll(m, Comment.fromJson)..sort((a, b) => a.createdAt.compareTo(b.createdAt))),
 );
 
 /// 일정 하나의 댓글(오래된 것부터 — 대화처럼 아래로 쌓인다).
@@ -102,6 +120,14 @@ final commentCountsProvider = Provider<Map<String, int>>((ref) {
   }
   return counts;
 });
+
+/// 뒤에서 올리다 실패한 쓰기(권한 거부·저장 공간 등). 앱 틀이 듣고 알려준다.
+final writeErrorsProvider = StreamProvider<Object>((ref) => ref.watch(storeProvider).writeErrors);
+
+/// 30초마다 지금 시각. "오늘" 화면의 지금/다음 일정·지금 시각 선이 켜 둔 채로도 따라가게(코드 점검 M5).
+final clockProvider = StreamProvider<DateTime>(
+  (_) => Stream.periodic(const Duration(seconds: 30), (_) => DateTime.now()),
+);
 
 /// 지금 설치된 앱 버전.
 final appVersionProvider = FutureProvider<AppVersion>((_) async {

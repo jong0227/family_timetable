@@ -20,31 +20,48 @@ class TodayScreen extends ConsumerStatefulWidget {
 }
 
 class _TodayScreenState extends ConsumerState<TodayScreen> {
-  late int _weekday = DateTime.now().weekday;
+  /// 다른 요일을 골랐으면 그 요일과 고른 날. 날짜가 바뀌면 저절로 오늘로 돌아간다 — 탭이 계속 살아 있어서
+  /// 어제 고른 요일이 다음 날 아침에도 "오늘"처럼 남던 문제(코드 점검 M5).
+  int? _picked;
+  DateTime? _pickedOn;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final now = DateTime.now();
-    final isToday = _weekday == now.weekday;
+    ref.watch(todayProvider); // 앱이 다시 앞으로 나오면 새로 그린다
+    final now = ref.watch(clockProvider).valueOrNull ?? DateTime.now();
+    final pickedToday = _pickedOn != null && DateUtils.isSameDay(_pickedOn, now);
+    final weekday = pickedToday ? _picked! : now.weekday;
+    final isToday = weekday == now.weekday;
+    void pick(int d) => setState(() {
+      _picked = d;
+      _pickedOn = now;
+    });
     final children = ref.watch(childrenProvider).valueOrNull ?? const <Child>[];
     final summary = buildDaySummary(
-      weekday: _weekday,
+      weekday: weekday,
       children: children,
       versionOf: (id) => ref.watch(currentVersionProvider(id)),
       nowMinutes: isToday ? now.hour * 60 + now.minute : null,
     );
-    final next = isToday ? summary.nextUpcoming : null;
+    // 오늘이면 "다음 일정", 다른 요일이면 그날 "첫 일정"(히어로 칩과 같은 말 — 디자인 점검).
+    final next = isToday
+        ? summary.nextUpcoming
+        : summary.children
+              .map((c) => c.focus)
+              .nonNulls
+              .fold<DayBlock?>(null, (best, b) => best == null || b.start < best.start ? b : best);
 
     return PageBody(
       children: [
         PageHeader(
-          title: isToday ? '오늘' : '${weekdayLabel(_weekday)}요일',
+          title: isToday ? '오늘' : '${weekdayLabel(weekday)}요일',
           subtitle: children.isEmpty ? '아이를 추가하면 하루 일정이 여기 모여요' : _subtitle(summary),
           asideTop: '${now.month}월 ${now.day}일',
           asideMain: '${weekdayLabel(now.weekday)}요일',
         ),
-        if (children.isEmpty)
+        // 아이가 없으면 안내만. (예전엔 개발용 버튼이 없는 릴리스에서 아래 KPI·빈 카드까지 같이 그려졌다)
+        if (children.isEmpty) ...[
           DashCard(
             child: EmptyState(
               emoji: '🧒',
@@ -54,20 +71,27 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               onAction: () => showChildFormSheet(context),
             ),
           ),
-        if (children.isEmpty && devToolsEnabled)
-          TextButton(onPressed: () => seedSampleFamily(ref), child: const Text('개발용: 샘플 가족 채우기'))
-        else ...[
+          if (devToolsEnabled) TextButton(onPressed: () => seedSampleFamily(ref), child: const Text('개발용: 샘플 가족 채우기')),
+        ] else ...[
           KpiRow([
             Kpi('일정', '${summary.blockCount}'),
-            Kpi('다음 일정', next == null ? '—' : formatMinutes(next.start)),
+            Kpi(isToday ? '다음 일정' : '첫 일정', next == null ? '—' : formatMinutes(next.start)),
             Kpi('빈 시간', '${summary.gapCount}', dot: summary.gapCount > 0 ? p.status.urgent : null),
           ]),
-          PillTabs<int>(
-            items: [
-              for (var d = 1; d <= 7; d++) (d, d == now.weekday ? '${weekdayLabel(d)} · 오늘' : weekdayLabel(d), null),
+          Row(
+            children: [
+              Expanded(
+                child: PillTabs<int>(
+                  items: [
+                    for (var d = 1; d <= 7; d++)
+                      (d, d == now.weekday ? '${weekdayLabel(d)} · 오늘' : weekdayLabel(d), null),
+                  ],
+                  selected: weekday,
+                  onChanged: pick,
+                ),
+              ),
+              if (!isToday) TextButton(onPressed: () => pick(now.weekday), child: const Text('오늘로')),
             ],
-            selected: _weekday,
-            onChanged: (d) => setState(() => _weekday = d),
           ),
           const SizedBox(height: AppGap.lg),
           _HeroPager(days: summary.children, isToday: isToday),

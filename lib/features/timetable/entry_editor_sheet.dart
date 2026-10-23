@@ -280,18 +280,38 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
   );
 
   Future<void> _save() async {
+    // 시간 칸에 "16"까지만 치고 바로 저장을 눌러도 친 값으로 저장되게, 먼저 입력을 끝내고(칸이 확정)
+    // 한 박자 기다린 뒤 값을 읽는다. 안드로이드는 버튼을 눌러도 입력칸 포커스가 안 빠져서, 예전엔
+    // 화면엔 16이 보이는데 15:00으로 저장됐다(코드 점검 M2).
+    FocusScope.of(context).unfocus();
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
     if (_title.text.trim().isEmpty) return showToast(context, '이름을 적어 주세요');
+    if (_end <= _start) return showToast(context, '끝 시간이 시작보다 늦어야 해요');
+    await _run(() async {
+      final repo = ref.read(repositoryProvider);
+      final original = _original;
+      if (original != null) {
+        await repo.upsertEntry(widget.version, _draft(_days.first, original.id));
+      } else {
+        final days = _days.toList()..sort();
+        // id는 비워 두면 리포지토리가 새로 붙인다.
+        await repo.addEntries(widget.version, [for (final d in days) _draft(d, '')]);
+      }
+    });
+  }
+
+  /// 저장·삭제 공통: 실패해도 버튼이 "저장 중"에 갇히지 않고 이유를 알린다(코드 점검 M6).
+  Future<void> _run(Future<void> Function() action) async {
     setState(() => _saving = true);
-    final repo = ref.read(repositoryProvider);
-    final original = _original;
-    if (original != null) {
-      await repo.upsertEntry(widget.version, _draft(_days.first, original.id));
-    } else {
-      final days = _days.toList()..sort();
-      // id는 비워 두면 리포지토리가 새로 붙인다.
-      await repo.addEntries(widget.version, [for (final d in days) _draft(d, '')]);
+    try {
+      await action();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) showToast(context, '저장하지 못했어요: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _delete() async {
@@ -304,9 +324,7 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
       destructive: true,
     );
     if (!ok) return;
-    setState(() => _saving = true);
-    await ref.read(repositoryProvider).deleteEntry(widget.version, original);
-    if (mounted) Navigator.pop(context);
+    await _run(() => ref.read(repositoryProvider).deleteEntry(widget.version, original));
   }
 }
 

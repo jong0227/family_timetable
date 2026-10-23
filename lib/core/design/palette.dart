@@ -28,7 +28,31 @@ class StatusColors {
   final Color positive;
   final Color neutral;
 
-  const StatusColors({required this.urgent, required this.info, required this.positive, required this.neutral});
+  /// 글자로 쓸 때의 진한 색. 점·선·막대는 위의 색 그대로, **글자·칩 글씨는 이 색**을 쓴다.
+  /// (라이트에서 초록 #0EBE82 글자는 흰 바탕 대비 2.4:1이라 작은 글씨로는 안 읽힌다 — 디자인 점검.
+  ///  아래 값은 흰 바탕에서 4.8~5.4:1. 다크는 원래 색이 이미 5.7~8.9:1이라 같은 값을 쓴다.)
+  final Color urgentText;
+  final Color infoText;
+  final Color positiveText;
+
+  const StatusColors({
+    required this.urgent,
+    required this.info,
+    required this.positive,
+    required this.neutral,
+    required this.urgentText,
+    required this.infoText,
+    required this.positiveText,
+  });
+
+  /// 상태색 하나를 글자용으로. 상태색이 아니면 그대로.
+  Color text(Color c) => c == urgent
+      ? urgentText
+      : c == info
+      ? infoText
+      : c == positive
+      ? positiveText
+      : c;
 }
 
 /// 자녀 한 명의 색 한 벌.
@@ -104,8 +128,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
   @override
   AppPalette lerp(ThemeExtension<AppPalette>? other, double t) => this;
 
-  // 자녀색 순서: 하늘 → 복숭아 → 민트 → 라벤더 → 레몬 → 장미
-  // 첫째·둘째가 서로 가장 멀리 떨어진 색을 받도록 섞어 두었다.
+  // 자녀색 순서: 장미 → 레몬 → 하늘 → 복숭아 → 민트 → 라벤더
+  // 앞의 둘(장미·레몬)은 어떤 종류색과도 겹치지 않는다. 자녀가 1~2명이면 "하늘색 = 첫째인지 학원인지"
+  // 헷갈릴 일이 없다(디자인 점검: 예전엔 첫째가 하늘색 = 학원색이었다). 셋째부터는 겹칠 수 있다.
   // 상태색(주황·청록·초록)과 겹치지 않게 채도를 낮춘 파스텔로만 고른다.
   static const light = AppPalette(
     status: StatusColors(
@@ -113,14 +138,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
       info: Color(0xFF2BA2C3),
       positive: Color(0xFF0EBE82),
       neutral: Color(0xFFD9D9D9),
+      urgentText: Color(0xFFD23C0C),
+      infoText: Color(0xFF1A7590),
+      positiveText: Color(0xFF087A55),
     ),
     childTones: [
+      ChildTone(Color(0xFFFBE3EA), Color(0xFF7A2141), Color(0xFFE0698F), [Color(0xFFFFDCE7), Color(0xFFF7EAF9)]),
+      ChildTone(Color(0xFFFAF2D6), Color(0xFF6A5410), Color(0xFFD9B23A), [Color(0xFFFAEFC8), Color(0xFFF3F8E1)]),
       ChildTone(Color(0xFFE3EEFB), Color(0xFF1E4A7A), Color(0xFF5B9BE0), [Color(0xFFD6E9FF), Color(0xFFE6F7F4)]),
       ChildTone(Color(0xFFFCE9DF), Color(0xFF7A3B18), Color(0xFFF08A5D), [Color(0xFFFFE1D2), Color(0xFFFFF3E3)]),
       ChildTone(Color(0xFFDFF4EA), Color(0xFF1B5C40), Color(0xFF3FB383), [Color(0xFFD3F3E4), Color(0xFFEAF6FB)]),
       ChildTone(Color(0xFFEEE6FA), Color(0xFF4A2F7A), Color(0xFF9A7BD8), [Color(0xFFE7DCFA), Color(0xFFF7EAF6)]),
-      ChildTone(Color(0xFFFAF2D6), Color(0xFF6A5410), Color(0xFFD9B23A), [Color(0xFFFAEFC8), Color(0xFFF3F8E1)]),
-      ChildTone(Color(0xFFFBE3EA), Color(0xFF7A2141), Color(0xFFE0698F), [Color(0xFFFFDCE7), Color(0xFFF7EAF9)]),
     ],
     // 학교는 바탕에 가까운 차분한 회청색(하루의 기본), 그 밖은 서로 멀리 떨어진 파스텔.
     kindTones: {
@@ -129,12 +157,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
       EntryKind.academy: ChildTone(Color(0xFFDDEBFB), Color(0xFF1E4A7A), Color(0xFF5B9BE0), []),
       EntryKind.activity: ChildTone(Color(0xFFDDF2E6), Color(0xFF1B5C40), Color(0xFF4FAE84), []),
       EntryKind.care: ChildTone(Color(0xFFFCE7DC), Color(0xFF7A3B18), Color(0xFFE8956A), []),
-      EntryKind.etc: ChildTone(Color(0xFFF3EEDC), Color(0xFF6A5410), Color(0xFFC9A63E), []),
+      // 기타는 무채색: 레몬을 자녀 전용으로 남기려고.
+      EntryKind.etc: ChildTone(Color(0xFFEFEFF1), Color(0xFF4A4A50), Color(0xFFA0A0A6), []),
     },
     canvas: Color(0xFFF1F1EF),
     surface: Color(0xFFFFFFFF),
     surfaceMuted: Color(0xFFF6F6F4),
-    textMuted: Color(0xFF8A8A8E),
+    // 8A8A8E는 흰 카드 3.4:1·바탕 3.0:1로 작은 글씨 기준(4.5:1) 미달 → 5.3:1 / 4.7:1 (디자인 점검)
+    textMuted: Color(0xFF6B6B70),
     dock: Color(0xFF151517),
     onDock: Color(0xFFFFFFFF),
   );
@@ -144,15 +174,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
       urgent: Color(0xFFFF6A3D),
       info: Color(0xFF4CC0DF),
       positive: Color(0xFF2BD99C),
-      neutral: Color(0xFF3A3A3E),
+      // 3A3A3E였는데 다크 카드 위 정시 줄이 1.2:1로 거의 안 보였다(디자인 점검).
+      neutral: Color(0xFF4E4E54),
+      urgentText: Color(0xFFFF6A3D),
+      infoText: Color(0xFF4CC0DF),
+      positiveText: Color(0xFF2BD99C),
     ),
     childTones: [
+      ChildTone(Color(0xFF3A1D29), Color(0xFFF6C4D5), Color(0xFFEE8BAB), [Color(0xFF4A2032), Color(0xFF3A2445)]),
+      ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), [Color(0xFF423A18), Color(0xFF2E3A1E)]),
       ChildTone(Color(0xFF1E2A3B), Color(0xFFC4DAF6), Color(0xFF7DB2EC), [Color(0xFF223450), Color(0xFF1D3A38)]),
       ChildTone(Color(0xFF3A2519), Color(0xFFF8D2BF), Color(0xFFF5A07A), [Color(0xFF4A2C1E), Color(0xFF3D3020)]),
       ChildTone(Color(0xFF1A3328), Color(0xFFBCE8D3), Color(0xFF5FCB9C), [Color(0xFF1C3D2E), Color(0xFF1E3340)]),
       ChildTone(Color(0xFF2B2340), Color(0xFFDCCDF7), Color(0xFFB59BEB), [Color(0xFF332850), Color(0xFF3B2640)]),
-      ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), [Color(0xFF423A18), Color(0xFF2E3A1E)]),
-      ChildTone(Color(0xFF3A1D29), Color(0xFFF6C4D5), Color(0xFFEE8BAB), [Color(0xFF4A2032), Color(0xFF3A2445)]),
     ],
     kindTones: {
       EntryKind.school: ChildTone(Color(0xFF262A33), Color(0xFFC9D0E0), Color(0xFF8E9AB8), []),
@@ -160,11 +194,12 @@ class AppPalette extends ThemeExtension<AppPalette> {
       EntryKind.academy: ChildTone(Color(0xFF1E2A3B), Color(0xFFC4DAF6), Color(0xFF7DB2EC), []),
       EntryKind.activity: ChildTone(Color(0xFF1A3328), Color(0xFFBCE8D3), Color(0xFF5FCB9C), []),
       EntryKind.care: ChildTone(Color(0xFF3A2519), Color(0xFFF8D2BF), Color(0xFFF5A07A), []),
-      EntryKind.etc: ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), []),
+      EntryKind.etc: ChildTone(Color(0xFF2A2A2F), Color(0xFFD0D0D6), Color(0xFF8E8E94), []),
     },
     canvas: Color(0xFF111113),
-    surface: Color(0xFF1C1C1F),
-    surfaceMuted: Color(0xFF242428),
+    // 바탕 111113과 카드 1C1C1F가 1.11:1로 카드 경계가 안 보였다 → 조금 밝게.
+    surface: Color(0xFF202024),
+    surfaceMuted: Color(0xFF2A2A2F),
     textMuted: Color(0xFF8E8E94),
     dock: Color(0xFFF2F2F2),
     onDock: Color(0xFF111113),

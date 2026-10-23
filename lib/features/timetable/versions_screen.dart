@@ -220,7 +220,7 @@ class _VersionTile extends ConsumerWidget {
           confirmLabel: '삭제',
           destructive: true,
         );
-        if (ok) await repo.deleteVersion(child, version, ref.read(childVersionsProvider(child.id)));
+        if (ok) await repo.deleteVersion(child, version);
     }
   }
 }

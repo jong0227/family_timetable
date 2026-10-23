@@ -154,14 +154,13 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
         firstVersionName: suggestVersionName(draft, DateTime.now()),
       );
     } else {
-      await repo.saveChild(
-        existing.copyWith(
-          name: name,
-          institution: _inst,
-          grade: grade,
-          schoolName: _school.text.trim(),
-          colorIndex: color,
-        ),
+      await repo.updateChildInfo(
+        existing,
+        name: name,
+        institution: _inst,
+        grade: grade,
+        schoolName: _school.text.trim(),
+        colorIndex: color,
       );
     }
     if (mounted) Navigator.pop(context);
