@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// 가족 시간표 앱 부분. Moneycraft(families/*) 규칙과 합쳐서 콘솔에 넣는다 — docs/FIREBASE_SETUP.md
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 가족 코드(6자리)를 아는 로그인 사용자만 그 가족 문서와 하위 컬렉션을 읽고 쓴다.
+    // 가족 코드가 사실상의 비밀번호다(Moneycraft와 같은 수준). 공개 배포 전 강화: ROADMAP M4.
+    match /timetable_families/{familyCode} {
+      allow read, write: if request.auth != null;
+
+      match /{collection}/{docId} {
+        allow read, write: if request.auth != null
+          && collection in ['members', 'children', 'versions', 'revisions'];
+      }
+    }
+  }
+}
