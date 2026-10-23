@@ -40,3 +40,16 @@ Set-Location "C:\dev\family_timetable"
 - 업데이트 설치(데이터 유지): `adb install -r <apk>` (`flutter install`은 데이터 지움)
 - applicationId `com.family.timetable` — 스토어 게시 후 변경 불가.
 - 릴리스 서명은 아직 디버그 키. 배포 전에 Moneycraft처럼 keystore + `android/key.properties` 구성.
+
+## 테스트 배포 (사용자가 고른 방식: PC에서 빌드 → GitHub 릴리스, 2026-10-23)
+폰에서 GitHub 저장소 Releases로 받아 설치한다. GitHub Actions 자동 빌드는 **하지 않기로 함**
+(정식 서명 키가 없어 CI 빌드는 서명이 달라 업데이트 설치가 막힌다).
+1. `pubspec.yaml` 버전 올리기(`0.1.x+N`, N은 매번 +1) → 커밋·푸시
+2. **이 PC(남편 노트북)에서** 빌드 — 디버그 키가 이 PC의 것이라 다른 PC 빌드로는 업데이트 불가:
+   `flutter build apk --release --split-per-abi --target-platform android-arm64`
+   (갤럭시 전용 arm64 ~20MB. 전체 빌드는 54MB라 폰 전송 한도 30MB를 넘는다)
+3. `C:\dev\share\FamilyTimetable-v<버전>.apk`로 복사
+4. `gh release create v<버전> <apk> --repo jong0227/family_timetable --target <브랜치명 또는 전체 SHA>
+   --title "가족 시간표 v<버전>" --notes-file <노트> --prerelease` (main에 합치기 전엔 pre-release.
+   `--target`에 짧은 SHA를 주면 422 오류)
+5. 노트에 설치법(지우지 말고 덮어 설치) + 바뀐 점. 저장소가 비공개라 폰 브라우저에 GitHub 로그인 필요.
