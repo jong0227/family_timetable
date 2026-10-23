@@ -25,6 +25,9 @@ class TimeScaleGrid extends StatelessWidget {
 
   final bool foldSchool;
 
+  /// 세로 배율(두 손가락 확대·축소). 1이면 기본.
+  final double zoom;
+
   /// 접힌 "학교" 칸을 눌렀을 때(펼치기).
   final VoidCallback? onToggleSchool;
 
@@ -36,6 +39,7 @@ class TimeScaleGrid extends StatelessWidget {
     this.onTapDay,
     this.commentCounts = const {},
     this.foldSchool = false,
+    this.zoom = 1,
     this.onToggleSchool,
   });
 
@@ -65,7 +69,7 @@ class TimeScaleGrid extends StatelessWidget {
       start: axisStart,
       end: axisEnd,
       folds: foldSchool ? schoolFolds(shown) : const [],
-      pxPerMinute: _pxPerMinute,
+      pxPerMinute: _pxPerMinute * zoom,
       foldHeight: _foldHeight,
     );
     final nowMinutes = now.hour * 60 + now.minute;
@@ -284,6 +288,13 @@ class _Block extends StatelessWidget {
                           : [if (showTime) fit(label), title],
                     ),
                   ),
+                  // 접힌 학교 칸은 "눌러서 펼친다"가 보여야 한다(어딜 눌러야 하냐는 실사용 질문).
+                  if (summary)
+                    Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: Icon(Icons.unfold_more_rounded, size: 14, color: tone.onContainer.withValues(alpha: 0.7)),
+                    ),
                   if (commentCount > 0)
                     Positioned(
                       top: 3,

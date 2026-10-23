@@ -43,6 +43,7 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
     );
     final commentCounts = ref.watch(commentCountsProvider);
     final foldSchool = ref.watch(foldSchoolProvider);
+    final zoom = ref.watch(timeScaleZoomProvider);
     final hasSchoolPeriods = v.entries.any((e) => e.kind == EntryKind.school && e.period != null);
     final ValueChanged<int>? onTapDay = canEdit
         ? (d) => showEntryEditor(context, child: widget.child, version: v, weekday: d)
@@ -103,23 +104,36 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                         ),
                         const Spacer(),
                         if (mode == WeekViewMode.timeScale && hasSchoolPeriods)
-                          TextButton.icon(
+                          // 글자 버튼은 눈에 잘 안 띄어서(실사용 질문) 알약 모양 버튼으로.
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 36),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              textStyle: const TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700),
+                            ),
                             onPressed: () => ref.read(foldSchoolProvider.notifier).toggle(),
-                            icon: Icon(foldSchool ? Icons.unfold_more_rounded : Icons.unfold_less_rounded, size: 18),
+                            icon: Icon(foldSchool ? Icons.unfold_more_rounded : Icons.unfold_less_rounded, size: 16),
                             label: Text(foldSchool ? '학교 펼치기' : '학교 접기'),
                           ),
                       ],
                     ),
                     const SizedBox(height: AppGap.md),
                     if (mode == WeekViewMode.timeScale)
-                      TimeScaleGrid(
-                        entries: v.entries,
-                        weekdays: weekdays,
-                        onTapEntry: onTapEntry,
-                        onTapDay: onTapDay,
-                        commentCounts: commentCounts,
-                        foldSchool: foldSchool,
-                        onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
+                      // 두 손가락으로 벌리면 세로로 늘고 오므리면 줄어든다(이 폰에 기억).
+                      PinchZoom(
+                        zoom: zoom,
+                        onZoom: (z) => ref.read(timeScaleZoomProvider.notifier).preview(z),
+                        onZoomEnd: () => ref.read(timeScaleZoomProvider.notifier).commit(),
+                        child: TimeScaleGrid(
+                          entries: v.entries,
+                          weekdays: weekdays,
+                          onTapEntry: onTapEntry,
+                          onTapDay: onTapDay,
+                          commentCounts: commentCounts,
+                          foldSchool: foldSchool,
+                          zoom: zoom,
+                          onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
+                        ),
                       )
                     else
                       WeekGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay),

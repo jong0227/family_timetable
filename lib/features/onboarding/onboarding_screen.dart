@@ -49,6 +49,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             selected: _joining,
             onChanged: (v) => setState(() => _joining = v),
           ),
+          if (!_joining) ...[
+            const SizedBox(height: AppGap.sm),
+            Text(
+              '가족이 이미 이 앱을 쓰고 있다면 "가족 코드로 참여"를 골라 주세요.',
+              style: TextStyle(fontSize: AppText.label, color: p.textMuted),
+            ),
+          ],
           const SizedBox(height: AppGap.lg),
           if (_joining) ...[
             if (!firebaseReady) InfoBanner(color: p.status.info, message: '가족 공유 설정(Firebase) 전이라 아직 참여할 수 없어요'),

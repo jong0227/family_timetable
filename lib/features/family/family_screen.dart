@@ -152,38 +152,107 @@ class _SharingCard extends ConsumerWidget {
     final firebaseReady = ref.watch(bootstrapProvider).firebaseReady;
     final code = session.familyCode;
 
+    // 처음에 실수로 "새로 시작"을 눌러 혼자만의 가족이 생겨도, 언제든 다른 가족 코드로 옮길 수 있어야 한다
+    // (예전엔 가족 코드 참여가 첫 화면에만 있어서 되돌릴 길이 없었다 — 실사용 피드백).
+    final joinOther = firebaseReady
+        ? Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _joinOtherFamily(context, ref, currentCode: code),
+              icon: const Icon(Icons.group_add_outlined, size: 18),
+              label: const Text('다른 가족 코드로 참여'),
+            ),
+          )
+        : null;
+
     if (code != null) {
       return DashCard(
         icon: Icons.sync_rounded,
         title: '가족 공유 중',
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: TimeText(code, size: AppText.kpi, weight: FontWeight.w300),
+            Row(
+              children: [
+                Expanded(
+                  child: TimeText(code, size: AppText.kpi, weight: FontWeight.w300),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    showToast(context, '가족 코드를 복사했어요. 가족에게 보내 주세요');
+                  },
+                  child: const Text('코드 복사'),
+                ),
+              ],
             ),
-            OutlinedButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: code));
-                showToast(context, '가족 코드를 복사했어요. 가족에게 보내 주세요');
-              },
-              child: const Text('코드 복사'),
-            ),
+            ?joinOther,
           ],
         ),
       );
     }
-    return InfoBanner(
-      color: firebaseReady ? p.status.info : p.status.neutral,
-      message: firebaseReady ? '이 폰에만 저장 중이에요' : '이 폰에만 저장 중 · 가족 공유 설정 전',
-      actionLabel: firebaseReady ? '공유 시작' : null,
-      onAction: () async {
-        try {
-          final c = await ref.read(sessionProvider.notifier).startSharing();
-          if (context.mounted) showToast(context, '가족 코드 $c 가 만들어졌어요');
-        } catch (e) {
-          if (context.mounted) showToast(context, '$e');
-        }
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InfoBanner(
+          color: firebaseReady ? p.status.info : p.status.neutral,
+          message: firebaseReady ? '이 폰에만 저장 중이에요' : '이 폰에만 저장 중 · 가족 공유 설정 전',
+          actionLabel: firebaseReady ? '공유 시작' : null,
+          onAction: () async {
+            try {
+              final c = await ref.read(sessionProvider.notifier).startSharing();
+              if (context.mounted) showToast(context, '가족 코드 $c 가 만들어졌어요');
+            } catch (e) {
+              if (context.mounted) showToast(context, '$e');
+            }
+          },
+        ),
+        ?joinOther,
+      ],
     );
+  }
+
+  /// 다른 가족 코드로 옮기기. 지금 가족의 데이터는 지우지 않는다(코드로 언제든 돌아올 수 있다).
+  /// 옮긴 뒤엔 "나는 누구예요?"(회원 고르기)로 간다.
+  Future<void> _joinOtherFamily(BuildContext context, WidgetRef ref, {required String? currentCode}) async {
+    final controller = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('다른 가족 코드로 참여'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(labelText: '가족 코드 6자리'),
+            ),
+            const SizedBox(height: AppGap.md),
+            Text(
+              currentCode != null
+                  ? '지금 가족($currentCode)에서 나와 새 가족의 시간표를 봐요. 지금 가족의 시간표는 지워지지 않고, 코드로 다시 돌아올 수 있어요.'
+                  : '이 폰에만 저장된 시간표는 새 가족으로 옮겨지지 않아요. 새 가족의 시간표를 보게 돼요.',
+              style: TextStyle(fontSize: AppText.label, color: ctx.palette.textMuted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('참여')),
+        ],
+      ),
+    );
+    final code = controller.text.trim().toUpperCase();
+    controller.dispose();
+    if (ok != true || code.isEmpty || !context.mounted) return;
+    if (code == currentCode) return showToast(context, '이미 이 가족이에요');
+    try {
+      await ref.read(sessionProvider.notifier).joinFamily(code);
+    } catch (e) {
+      if (context.mounted) showToast(context, '$e');
+    }
   }
 }

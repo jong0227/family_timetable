@@ -6,6 +6,7 @@ export 'components/cards.dart';
 export 'components/feedback.dart';
 export 'components/layout.dart';
 export 'components/navigation.dart';
+export 'components/pinch_zoom.dart';
 export 'components/time_input.dart';
 export 'palette.dart';
 export 'tokens.dart';

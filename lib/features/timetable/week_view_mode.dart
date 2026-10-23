@@ -46,3 +46,20 @@ class FoldSchoolController extends Notifier<bool> {
 }
 
 final foldSchoolProvider = NotifierProvider<FoldSchoolController, bool>(FoldSchoolController.new);
+
+/// 시간 비례 보기의 세로 배율(두 손가락으로 벌리면 확대, 오므리면 축소). 이 폰에 기억된다.
+class TimeScaleZoomController extends Notifier<double> {
+  static const _key = 'timeScaleZoom';
+  static const min = 0.5;
+  static const max = 2.5;
+
+  @override
+  double build() => ref.read(bootstrapProvider).prefs.getDouble(_key) ?? 1.0;
+
+  /// 손가락을 움직이는 동안(저장은 손을 뗄 때 [commit]).
+  void preview(double zoom) => state = zoom.clamp(min, max);
+
+  Future<void> commit() => ref.read(bootstrapProvider).prefs.setDouble(_key, state);
+}
+
+final timeScaleZoomProvider = NotifierProvider<TimeScaleZoomController, double>(TimeScaleZoomController.new);
