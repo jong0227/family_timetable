@@ -1,9 +1,17 @@
 rules_version = '2';
 
-// 가족 시간표 앱 부분. Moneycraft(families/*) 규칙과 합쳐서 콘솔에 넣는다 — docs/FIREBASE_SETUP.md
+// kids-allowance-48c8e 프로젝트의 Firestore 규칙 전체. Moneycraft와 가족 시간표가 같은 프로젝트를 쓴다.
+// ⚠️ 이 파일을 배포하면 프로젝트 규칙이 통째로 바뀐다. Moneycraft 부분(families)을 지우거나 고치지 말 것.
+// 배포: firebase deploy --only firestore:rules --project kids-allowance-48c8e  (docs/FIREBASE_SETUP.md)
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 가족 코드(6자리)를 아는 로그인 사용자만 그 가족 문서와 하위 컬렉션을 읽고 쓴다.
+    // ── Moneycraft (son_allowance_app) — 2026-10-23 배포돼 있던 그대로 ──
+    match /families/{code} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── 가족 시간표 (family_timetable) ──
+    // 가족 코드(6자리)를 아는 로그인 사용자(익명 포함)만 그 가족 문서와 하위 컬렉션을 읽고 쓴다.
     // 가족 코드가 사실상의 비밀번호다(Moneycraft와 같은 수준). 공개 배포 전 강화: ROADMAP M4.
     match /timetable_families/{familyCode} {
       allow read, write: if request.auth != null;

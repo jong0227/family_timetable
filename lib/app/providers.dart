@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../data/family_store.dart';
 import '../data/timetable_repository.dart';
+import '../data/update_service.dart';
+import '../domain/app_version.dart';
 import '../domain/models.dart';
 import '../domain/permissions.dart';
 import '../domain/timetable_logic.dart';
@@ -78,6 +81,19 @@ final permissionsProvider = Provider<Permissions>((ref) => Permissions(ref.watch
 final repositoryProvider = Provider<TimetableRepository>(
   (ref) => TimetableRepository(ref.watch(storeProvider), actorName: ref.watch(meProvider)?.name ?? '알 수 없음'),
 );
+
+/// 지금 설치된 앱 버전.
+final appVersionProvider = FutureProvider<AppVersion>((_) async {
+  final info = await PackageInfo.fromPlatform();
+  return AppVersion.tryParse(info.version) ?? const AppVersion(0, 0, 0);
+});
+
+/// GitHub에 올라온 새 버전(없으면 null). 앱을 켤 때 한 번 확인하고,
+/// 가족 탭의 "업데이트 확인"이 `ref.invalidate`로 다시 확인한다.
+final availableUpdateProvider = FutureProvider<AvailableUpdate?>((ref) async {
+  final current = await ref.watch(appVersionProvider.future);
+  return UpdateService().check(current);
+});
 
 /// 오늘 날짜. 앱을 켜 둔 채 날짜가 바뀌어도 방학 자동 적용이 따라가도록, 화면이 다시 앞으로
 /// 나올 때(AppShell의 resumed) 새로 고친다.

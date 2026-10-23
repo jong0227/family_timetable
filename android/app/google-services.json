@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "825299834904",
+    "project_id": "kids-allowance-48c8e",
+    "storage_bucket": "kids-allowance-48c8e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825299834904:android:d6917eb2a21ae9ce798b6d",
+        "android_client_info": {
+          "package_name": "com.family.son_allowance_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBs1BkXV2vC9y6zUma_jDoKuyRvcmv2wHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825299834904:android:07088e467b231c84798b6d",
+        "android_client_info": {
+          "package_name": "com.family.timetable"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBs1BkXV2vC9y6zUma_jDoKuyRvcmv2wHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825299834904:android:2c69d1c70914e05e798b6d",
+        "android_client_info": {
+          "package_name": "com.moneycraft.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBs1BkXV2vC9y6zUma_jDoKuyRvcmv2wHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

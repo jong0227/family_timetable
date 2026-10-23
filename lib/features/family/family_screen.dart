@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/session.dart';
 import '../../core/design/design.dart';
 import '../../domain/models.dart';
+import '../update/update_sheet.dart';
 import 'child_form_sheet.dart';
 
 /// 가족 탭: 공유 상태, 아이들, 가족 구성원.
@@ -77,7 +78,66 @@ class FamilyScreen extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: AppGap.md),
+        const _AppInfoCard(),
       ],
+    );
+  }
+}
+
+/// 앱 정보: 지금 버전, 새 버전 확인·업데이트.
+class _AppInfoCard extends ConsumerWidget {
+  const _AppInfoCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final current = ref.watch(appVersionProvider).valueOrNull;
+    final check = ref.watch(availableUpdateProvider);
+    final update = check.valueOrNull;
+
+    final (String status, Color color) = switch (check) {
+      AsyncLoading() => ('확인하는 중…', p.textMuted),
+      _ when update != null => ('새 버전 v${update.version}이 있어요', p.status.info),
+      _ => ('최신 버전이에요', p.status.positive),
+    };
+
+    return DashCard(
+      icon: Icons.system_update_alt_rounded,
+      title: '앱 정보',
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TimeText(current == null ? '—' : 'v$current', size: AppText.numSm, weight: FontWeight.w400),
+                const SizedBox(height: AppGap.xxs),
+                Row(
+                  children: [
+                    StatusDot(color, size: 6),
+                    const SizedBox(width: AppGap.snug),
+                    Text(
+                      status,
+                      style: TextStyle(fontSize: AppText.label, color: p.textMuted),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (update != null && current != null)
+            FilledButton(
+              onPressed: () => showUpdateSheet(context, update, current: current),
+              child: const Text('업데이트'),
+            )
+          else
+            OutlinedButton(
+              onPressed: check.isLoading ? null : () => ref.invalidate(availableUpdateProvider),
+              child: const Text('업데이트 확인'),
+            ),
+        ],
+      ),
     );
   }
 }

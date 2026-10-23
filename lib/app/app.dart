@@ -7,6 +7,7 @@ import '../features/family/family_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/timetable/timetable_screen.dart';
 import '../features/today/today_screen.dart';
+import '../features/update/update_sheet.dart';
 import 'providers.dart';
 import 'session.dart';
 
@@ -78,14 +79,31 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     final p = context.palette;
     final meta = ref.watch(familyMetaProvider).valueOrNull;
     final wide = Breakpoint.of(context) == Breakpoint.expanded;
+    final update = ref.watch(availableUpdateProvider).valueOrNull;
+    final current = ref.watch(appVersionProvider).valueOrNull;
+    Widget topBanner(Widget banner) => SafeArea(
+      bottom: false,
+      child: Padding(padding: const EdgeInsets.fromLTRB(AppGap.page, AppGap.sm, AppGap.page, 0), child: banner),
+    );
     final body = Column(
       children: [
+        // 가족 데이터가 이 앱보다 새 형식이면(가족 중 누가 먼저 업데이트) 업데이트를 강하게 권한다.
         if (meta?.isNewerThanApp ?? false)
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(AppGap.page, AppGap.sm, AppGap.page, 0),
-              child: InfoBanner(color: p.status.urgent, message: '가족 중 누군가 새 버전 앱을 쓰고 있어요. 앱을 업데이트해 주세요.'),
+          topBanner(
+            InfoBanner(
+              color: p.status.urgent,
+              message: '가족 중 누군가 새 버전 앱을 쓰고 있어요. 앱을 업데이트해 주세요.',
+              actionLabel: update != null && current != null ? '업데이트' : null,
+              onAction: () => showUpdateSheet(context, update!, current: current!),
+            ),
+          )
+        else if (update != null && current != null)
+          topBanner(
+            InfoBanner(
+              color: p.status.info,
+              message: '새 버전 v${update.version}이 나왔어요',
+              actionLabel: '업데이트',
+              onAction: () => showUpdateSheet(context, update, current: current),
             ),
           ),
         Expanded(
