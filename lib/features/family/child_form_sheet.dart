@@ -94,13 +94,11 @@ class _ChildFormSheetState extends ConsumerState<_ChildFormSheet> {
                     onTap: () => setState(() => _color = i),
                     child: AnimatedContainer(
                       duration: AppMotion.fast,
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(colors: p.childTones[i].gradient),
-                        border: Border.all(color: i == color ? p.childTones[i].accent : Colors.transparent, width: 3),
-                      ),
+                      width: 44,
+                      height: 44,
+                      // 파스텔 그라데이션은 36dp에서 서로 거의 같아 보여서 진한 단색 + 고른 것에 체크(디자인 점검).
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: p.childTones[i].accent),
+                      child: i == color ? const Icon(Icons.check_rounded, color: Colors.white, size: 22) : null,
                     ),
                   ),
               ],

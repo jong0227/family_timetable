@@ -45,7 +45,9 @@ class TimeScaleGrid extends StatelessWidget {
 
   // 1.1에서 올림: 40분 칸에 시작 시각 + 이름 두 줄이 들어가야 읽힌다(실기기 피드백).
   static const _pxPerMinute = 1.35;
-  static const _gutter = 30.0;
+  static const _gutterWide = 30.0;
+  // 주말까지 7칸이면 시각 눈금 칸과 열 사이를 줄여 열마다 몇 dp라도 더 준다(디자인 점검: 플립 7칸이면 글자 폭이 28dp).
+  static const _gutterNarrow = 20.0;
 
   /// 접힌 구간 하나가 차지하는 높이. "학교 · 5교시"가 들어가는 만큼.
   static const _foldHeight = 44.0;
@@ -98,6 +100,9 @@ class TimeScaleGrid extends StatelessWidget {
       ];
     }
 
+    final dense = weekdays.length >= 7;
+    final gutter = dense ? _gutterNarrow : _gutterWide;
+    final colGap = dense ? AppGap.xxs : AppGap.xs;
     final hourMarks = [
       for (var m = axisStart; m <= axisEnd; m += 60)
         if (!axis.isFolded(m)) m,
@@ -108,9 +113,9 @@ class TimeScaleGrid extends StatelessWidget {
       children: [
         Row(
           children: [
-            const SizedBox(width: _gutter),
+            SizedBox(width: gutter),
             for (var i = 0; i < weekdays.length; i++) ...[
-              if (i > 0) const SizedBox(width: AppGap.xs),
+              if (i > 0) SizedBox(width: colGap),
               Expanded(
                 child: WeekdayHeader(
                   weekday: weekdays[i],
@@ -129,7 +134,7 @@ class TimeScaleGrid extends StatelessWidget {
             children: [
               // 시각 눈금(정시마다, 접힌 구간 안은 빼고) + 접힌 자리 표시
               SizedBox(
-                width: _gutter,
+                width: gutter,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -147,14 +152,19 @@ class TimeScaleGrid extends StatelessWidget {
                         top: axis.y(a),
                         height: axis.y(b) - axis.y(a),
                         left: 0,
-                        width: _gutter - 6,
-                        child: Center(child: Icon(Icons.unfold_more_rounded, size: 14, color: p.textMuted)),
+                        width: gutter - 4,
+                        // 접힌 자리 표시도 누르면 펼친다(눌러 보고 싶게 생겼는데 아무 일 없던 것 — 디자인 점검).
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onToggleSchool,
+                          child: Center(child: Icon(Icons.unfold_more_rounded, size: 14, color: p.textMuted)),
+                        ),
                       ),
                   ],
                 ),
               ),
               for (var i = 0; i < weekdays.length; i++) ...[
-                if (i > 0) const SizedBox(width: AppGap.xs),
+                if (i > 0) SizedBox(width: colGap),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, c) {
@@ -169,7 +179,7 @@ class TimeScaleGrid extends StatelessWidget {
                               top: axis.y(m),
                               left: 0,
                               right: 0,
-                              child: Container(height: 1, color: p.status.neutral.withValues(alpha: 0.5)),
+                              child: Container(height: 1, color: p.status.neutral),
                             ),
                           for (final e in day)
                             () {
@@ -195,7 +205,8 @@ class TimeScaleGrid extends StatelessWidget {
                               top: axis.y(nowMinutes) - 1,
                               left: 0,
                               right: 0,
-                              child: Container(height: 2, color: p.status.urgent),
+                              // 주황(urgent)은 "빈 시간·겹침" 뜻이라 지금 선은 무채색 강조(라이트 검정/다크 흰색) — 디자인 점검
+                              child: Container(height: 2, color: p.dock),
                             ),
                         ],
                       );
@@ -265,10 +276,9 @@ class _Block extends StatelessWidget {
                 overflow: TextOverflow.clip,
                 style: TextStyle(
                   fontSize: _titleSize,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: tone.onContainer,
                   height: 1.25,
-                  letterSpacing: -0.2,
                 ),
               );
               // 좁은 칸에서도 시각이 잘리지 않게 줄여서라도 한 줄에 넣는다.
@@ -283,8 +293,42 @@ class _Block extends StatelessWidget {
                     padding: EdgeInsets.fromLTRB(4, h < 24 ? 1 : 3, 2, 2),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: summary
-                          ? [title, if (showTime) fit('$schoolPeriods교시 $label')]
+                      // 접힌 학교 칸: "학교" / "13:40"(끝 = 하원 시각) 두 줄. 예전엔 "5교시 ~13:40"을 한 줄에 줄여 넣어
+                      // 4~6px로 작아졌다(디자인 점검). 교시 수는 칸이 넉넉할 때만.
+                      // 일찍 끝나는 날은 접힌 칸이 낮아서 두 줄이 안 들어간다. 그땐 "학교"(색으로 이미 보임) 대신
+                      // 끝 시각(= 하원·픽업 시각)만 남긴다.
+                      children: summary && !showTime
+                          ? [
+                              Text(
+                                formatMinutes(entry.end),
+                                style: AppFonts.numeric(
+                                  size: AppText.caption,
+                                  weight: FontWeight.w600,
+                                  color: tone.onContainer,
+                                ),
+                              ),
+                            ]
+                          : summary
+                          ? [
+                              title,
+                              if (showTime)
+                                Text(
+                                  formatMinutes(entry.end),
+                                  style: AppFonts.numeric(
+                                    size: AppText.caption,
+                                    weight: FontWeight.w600,
+                                    color: tone.onContainer,
+                                  ),
+                                ),
+                              if (showTime && c.maxWidth >= 48 && h >= 56)
+                                Text(
+                                  '$schoolPeriods교시',
+                                  style: TextStyle(
+                                    fontSize: AppText.caption,
+                                    color: tone.onContainer.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                            ]
                           : [if (showTime) fit(label), title],
                     ),
                   ),
@@ -292,7 +336,7 @@ class _Block extends StatelessWidget {
                   if (summary)
                     Positioned(
                       right: 2,
-                      bottom: 2,
+                      top: 2,
                       child: Icon(Icons.unfold_more_rounded, size: 14, color: tone.onContainer.withValues(alpha: 0.7)),
                     ),
                   if (commentCount > 0)
@@ -300,9 +344,14 @@ class _Block extends StatelessWidget {
                       top: 3,
                       right: 3,
                       child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(color: p.status.info, shape: BoxShape.circle),
+                        width: 9,
+                        height: 9,
+                        // 청록 점이 하늘색 학원 칸에 묻혀서 무채색 점 + 칸 색 테두리로(디자인 점검).
+                        decoration: BoxDecoration(
+                          color: p.dock,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: tone.container, width: 1.5),
+                        ),
                       ),
                     ),
                 ],

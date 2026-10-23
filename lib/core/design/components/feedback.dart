@@ -126,7 +126,7 @@ class ChildBadge extends StatelessWidget {
   }
 }
 
-/// 일정 종류 표시(이모지 + 글자). 색을 쓰지 않는다 — 색은 자녀·상태 몫(palette.dart).
+/// 일정 종류 글자 표시(이모지 + 글자). 칸·막대의 종류색은 palette.dart의 kindTones가 맡는다.
 class KindTag extends StatelessWidget {
   final EntryKind kind;
   const KindTag(this.kind, {super.key});

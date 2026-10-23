@@ -48,13 +48,16 @@ class DashCard extends StatelessWidget {
                         style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: p.textMuted),
                       ),
                     ),
+                    // 흐린 글자 + GestureDetector(약 17dp)라 링크인지도 모르고 누르기도 어려웠다(디자인 점검).
                     if (linkLabel != null)
-                      GestureDetector(
-                        onTap: onLink,
-                        child: Text(
-                          linkLabel!,
-                          style: TextStyle(fontSize: AppText.label, color: p.textMuted),
+                      TextButton(
+                        onPressed: onLink,
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(0, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          textStyle: const TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700),
                         ),
+                        child: Text(linkLabel!),
                       ),
                   ],
                 ),
@@ -126,7 +129,11 @@ class StatusChip extends StatelessWidget {
           ],
           Text(
             label,
-            style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w600, color: color),
+            style: TextStyle(
+              fontSize: AppText.caption,
+              fontWeight: FontWeight.w600,
+              color: context.palette.status.text(color),
+            ),
           ),
         ],
       ),

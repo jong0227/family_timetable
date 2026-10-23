@@ -126,7 +126,7 @@ class WeekdayHeader extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 32,
+        height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isToday ? p.dock : Colors.transparent,

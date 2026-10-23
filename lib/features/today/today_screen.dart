@@ -334,7 +334,11 @@ class _GapRow extends StatelessWidget {
           const SizedBox(width: AppGap.sm),
           Text(
             '빈 시간 ${gap.minutes}분 (${formatMinutes(gap.start)}–${formatMinutes(gap.end)})',
-            style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w600, color: urgent),
+            style: TextStyle(
+              fontSize: AppText.label,
+              fontWeight: FontWeight.w600,
+              color: context.palette.status.urgentText,
+            ),
           ),
         ],
       ),

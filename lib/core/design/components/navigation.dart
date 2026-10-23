@@ -115,7 +115,10 @@ class PillTabs<T> extends StatelessWidget {
                 onTap: () => onChanged(value),
                 child: AnimatedContainer(
                   duration: AppMotion.fast,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ), // 33→약 39dp + 바깥 4 (디자인 점검: 누르기 영역)
                   decoration: BoxDecoration(
                     color: value == selected ? p.dock : Colors.transparent,
                     borderRadius: BorderRadius.circular(AppRadius.pill),

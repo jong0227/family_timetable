@@ -7,7 +7,7 @@
 
 ## 📍 현재 상태 / 다음 할 일 (이어받기용)
 - **M0 기반, M1 시간표 입력·학기·수정 기록 완료 (2026-10-23)**. 다음은 **M2 가족 운영**(픽업 담당·알림) → `docs/ROADMAP.md`
-- 저장소: https://github.com/jong0227/family_timetable (private). M1은 브랜치 `m1-timetable-editing`
+- 저장소: https://github.com/jong0227/family_timetable (**공개** — 앱 안 업데이트가 로그인 없이 릴리스를 읽어야 해서. 2026-10-23 사용자 결정). M1은 브랜치 `m1-timetable-editing`
 - 디자인 미리보기: `tool/preview_web.bat` → 브라우저 localhost:5173 (웹은 메모리 저장, 새로고침하면 초기화). 디버그 빌드 빈 화면의 "개발용: 샘플 가족 채우기"로 데이터 채우기
 - Firebase 연결 완료(2026-10-23). 규칙·설정: `docs/FIREBASE_SETUP.md`
 - 앱 안 업데이트: 공개 저장소의 GitHub 릴리스를 앱이 읽는다 → **릴리스 태그 버전(vX.Y.Z)이 pubspec 버전과 같아야** 업데이트가 뜬다
@@ -24,7 +24,7 @@
 3. 권한 조건은 `Permissions`에만. 화면에서 `me.isParent` 직접 쓰지 않기.
 4. 화면에서 숫자·색을 직접 쓰지 않는다. `AppText/AppGap/AppRadius/AppMotion`, `context.palette`.
    화면 파일은 `core/design/design.dart` 하나만 import.
-5. 색은 정보다: 상태색(urgent/info/positive/neutral) + 자녀색만. 일정 종류는 이모지+글자.
+5. 색은 정보다: 상태색(점·선은 urgent/info/positive, **글자는 urgentText/infoText/positiveText**) · 자녀색(히어로·칩·점) · 종류색(시간표 칸·타임라인 막대). 세 가지 자리를 섞지 않는다.
 6. 자녀를 "첫째/둘째"로 하드코딩하지 않는다. 1명이든 N명이든 같은 코드 경로.
 7. 문서 모양을 바꾸면 `kSchemaVersion` + 마이그레이션 절차(ARCHITECTURE 3장).
 8. 커밋 전 `flutter analyze` 0건, `flutter test` 전부 통과. 버그 고치면 재현 테스트 추가.
@@ -52,4 +52,4 @@ Set-Location "C:\dev\family_timetable"
 4. `gh release create v<버전> <apk> --repo jong0227/family_timetable --target <브랜치명 또는 전체 SHA>
    --title "가족 시간표 v<버전>" --notes-file <노트> --prerelease` (main에 합치기 전엔 pre-release.
    `--target`에 짧은 SHA를 주면 422 오류)
-5. 노트에 설치법(지우지 말고 덮어 설치) + 바뀐 점. 저장소가 비공개라 폰 브라우저에 GitHub 로그인 필요.
+5. 노트에 설치법(지우지 말고 덮어 설치) + 바뀐 점. 앱 안 업데이트는 가장 높은 태그의 APK를 받는다(pre-release 포함).

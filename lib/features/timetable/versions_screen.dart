@@ -165,7 +165,7 @@ class _VersionTile extends ConsumerWidget {
   Future<void> _menu(BuildContext context, WidgetRef ref, bool inUse) async {
     ListTile item(BuildContext ctx, IconData icon, String title, String action, {bool danger = false}) => ListTile(
       leading: Icon(icon, color: danger ? ctx.palette.status.urgent : null),
-      title: Text(title, style: danger ? TextStyle(color: ctx.palette.status.urgent) : null),
+      title: Text(title, style: danger ? TextStyle(color: ctx.palette.status.urgentText) : null),
       onTap: () => Navigator.pop(ctx, action),
     );
     final action = await showModalBottomSheet<String>(

@@ -119,7 +119,7 @@ class _UpdateSheetState extends State<_UpdateSheet> {
             const SizedBox(height: AppGap.sm),
             Text(
               _error!,
-              style: TextStyle(fontSize: AppText.label, color: p.status.urgent, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: AppText.label, color: p.status.urgentText, fontWeight: FontWeight.w600),
             ),
           ],
           const SizedBox(height: AppGap.lg),

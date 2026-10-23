@@ -16,7 +16,7 @@ class AppText {
   static const micro = 10.0; // 시간표 격자 안 시간
   static const caption = 11.0; // KPI 라벨, 보조 설명
   static const label = 12.0; // 칩, 태그
-  static const body = 13.0; // 본문 기본
+  static const body = 14.0; // 본문 기본 (13→14: 30~40대 부모·아이에게 13px은 작다 — 디자인 점검)
   static const bodyLg = 14.0; // 강조 본문
   static const title = 15.0; // 카드 제목
   static const titleLg = 16.0; // 큰 카드 제목
@@ -72,8 +72,9 @@ class AppGap {
   static const page = 20.0;
 }
 
-/// 글씨 굵기는 다섯 가지만.
+/// 글씨 굵기:
 ///   w300 — 대제목·KPI 숫자 전용(크게 쓸 때만 가늘게. 작은 글씨에 쓰면 안 읽힌다)
+///   w400·w500 — Poppins 숫자 전용(입력 칸의 시각, 시각 눈금). 한글엔 쓰지 않는다
 ///   w600 — 라벨, 보조 강조
 ///   w700 — 제목, 버튼
 ///   w800 — 카드 제목, 강조 시각

@@ -147,7 +147,7 @@ class _TimeInputFieldState extends State<TimeInputField> {
               children: [
                 Text(
                   _invalid ? '예: 1530, 930' : widget.label,
-                  style: TextStyle(fontSize: AppText.caption, color: _invalid ? p.status.urgent : p.textMuted),
+                  style: TextStyle(fontSize: AppText.caption, color: _invalid ? p.status.urgentText : p.textMuted),
                 ),
                 TextField(
                   controller: _controller,

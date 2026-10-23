@@ -187,7 +187,7 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
               const SizedBox(height: AppGap.sm),
               Text(
                 '끝 시간이 시작보다 늦어야 해요',
-                style: TextStyle(fontSize: AppText.label, color: p.status.urgent, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: AppText.label, color: p.status.urgentText, fontWeight: FontWeight.w600),
               ),
             ],
             if (overlaps.isNotEmpty) ...[
@@ -199,7 +199,11 @@ class _EntryEditorState extends ConsumerState<_EntryEditor> {
                   Expanded(
                     child: Text(
                       '겹치는 일정: ${overlaps.map(describeEntry).join(', ')}',
-                      style: TextStyle(fontSize: AppText.label, color: p.status.urgent, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: AppText.label,
+                        color: p.status.urgentText,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

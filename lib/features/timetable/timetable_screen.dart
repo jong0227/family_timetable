@@ -78,7 +78,10 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   }
 }
 
-/// "지금: 2학년 2학기" + 학기 관리 / 수정 기록 바로가기.
+/// 지금 쓰는 시간표 한 줄: "2학년 2학기 · 사용 중" + 학기 관리·수정 기록 바로가기.
+///
+/// 예전엔 파스텔 히어로 카드(약 180dp)였는데, 이 탭을 여는 이유인 주간 격자가 플립에서 화면 아래로 밀려났다
+/// (디자인 점검). 시간표 이름은 한 줄로 줄이고 격자를 위로 올린다. 히어로 카드는 "오늘" 화면의 몫.
 class _VersionCard extends ConsumerWidget {
   final Child child;
   final TimetableVersion? version;
@@ -90,90 +93,49 @@ class _VersionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
     final today = ref.watch(todayProvider);
-    final tone = p.child(child.colorIndex);
     final v = version;
-    return HeroCard(
-      gradient: tone.gradient,
-      onTap: () =>
-          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => VersionsScreen(childId: child.id))),
+    final chip = v == null
+        ? null
+        : v.covers(today)
+        ? StatusChip('방학 · ${formatDateShort(v.endDate!)}까지', color: p.status.positive, dot: true)
+        : StatusChip('사용 중', color: p.status.positive, dot: true);
+    void open(Widget screen) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+
+    return DashCard(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               ChildBadge(child),
-              const Spacer(),
-              if (v != null)
-                v.covers(today)
-                    ? StatusChip('방학 · ${formatDateShort(v.endDate!)}까지', color: p.status.positive, dot: true)
-                    : StatusChip('사용 중', color: p.status.positive, dot: true),
+              const SizedBox(width: AppGap.sm),
+              Expanded(
+                child: Text(
+                  v?.name ?? '시간표 없음',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
+                ),
+              ),
+              ?chip,
             ],
           ),
-          const SizedBox(height: AppGap.lg),
-          Text(
-            v?.name ?? '시간표 없음',
-            style: TextStyle(fontSize: AppText.hero, fontWeight: FontWeight.w300, color: tone.onContainer, height: 1.1),
-          ),
-          const SizedBox(height: AppGap.md),
           Row(
             children: [
-              _HeroLink(
-                icon: Icons.layers_outlined,
-                label: '시간표 $versionCount개',
-                color: tone.onContainer,
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute<void>(builder: (_) => VersionsScreen(childId: child.id))),
+              TextButton.icon(
+                onPressed: () => open(VersionsScreen(childId: child.id)),
+                icon: const Icon(Icons.layers_outlined, size: 18),
+                label: Text('시간표 $versionCount개'),
               ),
-              if (v != null) ...[
-                const SizedBox(width: AppGap.sm),
-                _HeroLink(
-                  icon: Icons.history_rounded,
-                  label: '수정 기록',
-                  color: tone.onContainer,
-                  onTap: () => Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute<void>(builder: (_) => RevisionsScreen(versionId: v.id))),
+              if (v != null)
+                TextButton.icon(
+                  onPressed: () => open(RevisionsScreen(versionId: v.id)),
+                  icon: const Icon(Icons.history_rounded, size: 18),
+                  label: const Text('수정 기록'),
                 ),
-              ],
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroLink extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _HeroLink({required this.icon, required this.label, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: context.palette.surface.withValues(alpha: 0.7),
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: AppGap.xs),
-              Text(
-                label,
-                style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: color),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
