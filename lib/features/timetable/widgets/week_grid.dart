@@ -4,17 +4,16 @@ import '../../../core/design/design.dart';
 import '../../../domain/models.dart';
 import '../../../domain/timetable_logic.dart';
 
-/// 주간 시간표 격자. 종이 시간표처럼 두 부분으로 나눈다.
+/// 주간 시간표 격자(간단히 보기). 종이 시간표처럼 두 부분으로 나눈다.
 ///
 /// 1. 학교 교시 — 교시마다 한 줄로 **가로로 맞춘다**(월 3교시와 화 3교시가 같은 높이).
 ///    그 요일에 없는 교시는 빈칸.
-/// 2. 방과 후 — 학원·활동·돌봄을 요일 열마다 시간순으로 쌓는다.
+/// 2. 방과 후 — 방과후·학원·활동·돌봄을 요일 열마다 시간순으로 쌓는다.
 ///
-/// 시간 축에 비례해 칸 높이를 정하는 방식은 플립 좁은 화면에서 40분 칸이 너무 얇아져
-/// 글자가 안 들어가서 쓰지 않았다. 시각은 칸 안에 숫자로 보여준다.
+/// 칸 높이가 시간과 상관없어서 길이·간격은 안 보인다. 그건 [TimeScaleGrid](시간 비례)가 맡는다.
+/// 칸 색은 일정 종류([AppPalette.kind]).
 class WeekGrid extends StatelessWidget {
   final List<Entry> entries;
-  final ChildTone tone;
   final List<int> weekdays;
 
   /// null이면 읽기 전용.
@@ -26,7 +25,6 @@ class WeekGrid extends StatelessWidget {
   const WeekGrid({
     super.key,
     required this.entries,
-    required this.tone,
     this.weekdays = const [1, 2, 3, 4, 5],
     this.onTapEntry,
     this.onTapDay,
@@ -61,7 +59,7 @@ class WeekGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        row((d) => _DayHeader(weekday: d, isToday: d == today, onTap: onTapDay == null ? null : () => onTapDay!(d))),
+        row((d) => WeekdayHeader(weekday: d, isToday: d == today, onTap: onTapDay == null ? null : () => onTapDay!(d))),
         const SizedBox(height: AppGap.snug),
         for (var period = 1; period <= maxPeriod; period++) ...[
           SizedBox(
@@ -74,7 +72,6 @@ class WeekGrid extends StatelessWidget {
                       entry: e,
                       label: '$period교시',
                       school: true,
-                      tone: tone,
                       onTap: onTapEntry == null ? null : () => onTapEntry!(e),
                     );
             }),
@@ -101,7 +98,6 @@ class WeekGrid extends StatelessWidget {
                       entry: e,
                       label: formatMinutes(e.start),
                       school: false,
-                      tone: tone,
                       onTap: onTapEntry == null ? null : () => onTapEntry!(e),
                     ),
                   ),
@@ -116,12 +112,13 @@ class WeekGrid extends StatelessWidget {
   static bool _isPeriod(Entry e) => e.kind == EntryKind.school && e.period != null;
 }
 
-class _DayHeader extends StatelessWidget {
+/// 요일 머리(오늘은 검은 알약). 간단히/시간 비례 두 보기가 같이 쓴다.
+class WeekdayHeader extends StatelessWidget {
   final int weekday;
   final bool isToday;
   final VoidCallback? onTap;
 
-  const _DayHeader({required this.weekday, required this.isToday, this.onTap});
+  const WeekdayHeader({super.key, required this.weekday, required this.isToday, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -148,29 +145,61 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
+/// 종류색 범례. 시간표에 실제로 있는 종류만, 정해진 순서(학교→방과후→학원…)로.
+class KindLegend extends StatelessWidget {
+  final Iterable<Entry> entries;
+  const KindLegend({super.key, required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final present = entries.map((e) => e.kind).toSet();
+    final kinds = EntryKind.values.where(present.contains).toList();
+    if (kinds.length < 2) return const SizedBox.shrink();
+    return Wrap(
+      spacing: AppGap.md,
+      runSpacing: AppGap.xs,
+      children: [
+        for (final k in kinds)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: p.kind(k).accent, borderRadius: BorderRadius.circular(3)),
+              ),
+              const SizedBox(width: AppGap.xs),
+              Text(
+                k.label,
+                style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
 class _Cell extends StatelessWidget {
   final Entry entry;
   final String label;
   final bool school;
-  final ChildTone tone;
   final VoidCallback? onTap;
 
-  const _Cell({required this.entry, required this.label, required this.school, required this.tone, this.onTap});
+  const _Cell({required this.entry, required this.label, required this.school, this.onTap});
 
   /// "15:00–16:00"(Poppins 10)이 한 줄에 들어가는 칸 안쪽 폭. 이보다 좁으면 두 줄로 나눈다.
   static const _rangeOnOneLineWidth = 64.0;
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
-    // 학교 교시는 옅은 회색 칸, 방과 후 일정은 자녀색 칸 — 한눈에 구분된다.
-    final bg = school ? p.surfaceMuted : tone.container;
-    final fg = school ? null : tone.onContainer;
+    final tone = context.palette.kind(entry.kind);
     return Semantics(
       button: onTap != null,
-      label: '${weekdayLabel(entry.weekday)} $label ${entry.title}',
+      label: '${weekdayLabel(entry.weekday)} $label ${entry.kind.label} ${entry.title}',
       child: Material(
-        color: bg,
+        color: tone.container,
         borderRadius: BorderRadius.circular(AppRadius.xs),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -184,7 +213,7 @@ class _Cell extends StatelessWidget {
                 final timeStyle = AppFonts.numeric(
                   size: AppText.micro,
                   weight: FontWeight.w600,
-                  color: fg ?? p.textMuted,
+                  color: tone.onContainer,
                 );
                 final wide = c.maxWidth >= _rangeOnOneLineWidth;
                 final end = formatMinutes(entry.end);
@@ -197,7 +226,12 @@ class _Cell extends StatelessWidget {
                       shortTitle(entry.title),
                       maxLines: school ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: AppText.caption, fontWeight: FontWeight.w700, color: fg, height: 1.25),
+                      style: TextStyle(
+                        fontSize: AppText.caption,
+                        fontWeight: FontWeight.w700,
+                        color: tone.onContainer,
+                        height: 1.25,
+                      ),
                     ),
                     if (!school && !wide) Text('~$end', style: timeStyle),
                   ],

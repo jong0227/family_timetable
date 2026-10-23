@@ -44,6 +44,31 @@ void main() {
     expect(shortTitle('수학'), '수학');
   });
 
+  group('시간 비례 보기 자리 배정', () {
+    test('안 겹치면 각자 폭을 다 쓴다', () {
+      final lanes = assignLanes([e(1, 540, 580, '국어'), e(1, 590, 630, '수학'), e(1, 900, 960, '피아노')]);
+      expect(lanes.values.every((s) => s.lanes == 1 && s.lane == 0), isTrue);
+    });
+
+    test('겹치는 것끼리만 나란히(학교 끝나기 전 시작하는 돌봄)', () {
+      final school = e(1, 540, 820, '학교');
+      final care = e(1, 780, 1020, '돌봄');
+      final piano = e(1, 1080, 1140, '피아노');
+      final lanes = assignLanes([care, school, piano]);
+      expect(lanes[school.id], (lane: 0, lanes: 2));
+      expect(lanes[care.id], (lane: 1, lanes: 2));
+      expect(lanes[piano.id], (lane: 0, lanes: 1), reason: '뒤에 안 겹치는 일정은 다시 폭 전체');
+    });
+
+    test('앞 줄이 비면 그 줄을 다시 쓴다', () {
+      final a = e(1, 540, 600, 'A');
+      final b = e(1, 550, 700, 'B');
+      final c = e(1, 610, 650, 'C'); // A가 끝난 뒤, B와는 겹침 → A 자리(0번 줄)
+      final lanes = assignLanes([a, b, c]);
+      expect(lanes[c.id], (lane: 0, lanes: 2));
+    });
+  });
+
   test('학교 교시는 한 덩어리로 묶는다', () {
     final blocks = groupDay([
       e(1, 540, 580, '국어', kind: EntryKind.school, period: 1),

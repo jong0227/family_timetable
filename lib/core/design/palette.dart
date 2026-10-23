@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/models.dart';
+
 /// 색 체계.
 ///
 /// 디자인 방향은 FacilityFlow 대시보드 레퍼런스(docs/DESIGN_SYSTEM.md 참고):
 /// 밝은 무채색 바탕 + 흰 카드 + **뜻이 있는 색만** 쓴다. 색은 장식이 아니라 정보다.
 ///
-/// 색이 하는 일은 딱 두 가지로 나눈다.
+/// 색이 하는 일은 세 가지로 나누고, **쓰는 자리를 겹치지 않게** 정한다.
 /// 1. 상태색([StatusColors]) — "지금 신경 써야 하나?"  작은 점·칩·숫자에만 쓴다.
 ///    urgent  주황  빈 시간(보호 공백), 겹치는 일정, 되돌릴 수 없는 동작
 ///    info    청록  동기화·안내·지난 시간표 보는 중
 ///    positive 초록 지금 쓰는 버전, 진행 중인 일정, 동기화 완료
 ///    neutral 회색  구분선, 비활성
-/// 2. 자녀색([ChildTone]) — "누구의 일정인가". 칸 배경을 옅게, 히어로 카드 그라데이션.
+/// 2. 자녀색([ChildTone]) — "누구인가". 히어로 카드 그라데이션, 자녀 칩·점·배지에만.
+/// 3. 종류색([kindTones]) — "무슨 일정인가". 시간표 칸(주간표)과 하루 타임라인의 막대에만.
+///    학교 / 방과후 / 학원 / 활동 / 돌봄 / 기타.
 ///
-/// 일정 종류(학교/학원…)는 색이 아니라 이모지+글자로 구분한다. 세 번째 색 체계를 만들면
-/// "파란 칸이 첫째인지 학원인지" 헷갈리기 때문이다.
+/// 처음엔 칸도 자녀색으로 칠하고 종류는 이모지로만 나눴는데, 실사용에서 "학교·방과후·학원이
+/// 색으로 구분돼야 한눈에 보인다"는 요청이 있었다. 시간표 화면은 이미 자녀 한 명 것만 보여주므로
+/// 칸은 종류색으로 칠해도 "누구 것인지"가 헷갈리지 않는다. 종류색은 상태색(주황·청록·초록)과
+/// 겹치지 않는 파스텔로만 고른다.
 @immutable
 class StatusColors {
   final Color urgent;
@@ -67,6 +73,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.status,
     required this.childTones,
+    required this.kindTones,
     required this.canvas,
     required this.surface,
     required this.surfaceMuted,
@@ -74,6 +81,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.dock,
     required this.onDock,
   });
+
+  /// 일정 종류별 색. 칸 배경 container, 글자 onContainer, 막대·범례 점 accent.
+  final Map<EntryKind, ChildTone> kindTones;
+
+  ChildTone kind(EntryKind k) => kindTones[k] ?? kindTones[EntryKind.etc]!;
 
   ChildTone child(int colorIndex) => childTones[colorIndex % childTones.length];
 
@@ -110,6 +122,15 @@ class AppPalette extends ThemeExtension<AppPalette> {
       ChildTone(Color(0xFFFAF2D6), Color(0xFF6A5410), Color(0xFFD9B23A), [Color(0xFFFAEFC8), Color(0xFFF3F8E1)]),
       ChildTone(Color(0xFFFBE3EA), Color(0xFF7A2141), Color(0xFFE0698F), [Color(0xFFFFDCE7), Color(0xFFF7EAF9)]),
     ],
+    // 학교는 바탕에 가까운 차분한 회청색(하루의 기본), 그 밖은 서로 멀리 떨어진 파스텔.
+    kindTones: {
+      EntryKind.school: ChildTone(Color(0xFFE9ECF2), Color(0xFF3A4560), Color(0xFF7D8AA8), []),
+      EntryKind.afterSchool: ChildTone(Color(0xFFEEE5FA), Color(0xFF4A2F7A), Color(0xFF9A7BD8), []),
+      EntryKind.academy: ChildTone(Color(0xFFDDEBFB), Color(0xFF1E4A7A), Color(0xFF5B9BE0), []),
+      EntryKind.activity: ChildTone(Color(0xFFDDF2E6), Color(0xFF1B5C40), Color(0xFF4FAE84), []),
+      EntryKind.care: ChildTone(Color(0xFFFCE7DC), Color(0xFF7A3B18), Color(0xFFE8956A), []),
+      EntryKind.etc: ChildTone(Color(0xFFF3EEDC), Color(0xFF6A5410), Color(0xFFC9A63E), []),
+    },
     canvas: Color(0xFFF1F1EF),
     surface: Color(0xFFFFFFFF),
     surfaceMuted: Color(0xFFF6F6F4),
@@ -133,6 +154,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
       ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), [Color(0xFF423A18), Color(0xFF2E3A1E)]),
       ChildTone(Color(0xFF3A1D29), Color(0xFFF6C4D5), Color(0xFFEE8BAB), [Color(0xFF4A2032), Color(0xFF3A2445)]),
     ],
+    kindTones: {
+      EntryKind.school: ChildTone(Color(0xFF262A33), Color(0xFFC9D0E0), Color(0xFF8E9AB8), []),
+      EntryKind.afterSchool: ChildTone(Color(0xFF2C2440), Color(0xFFDCCDF7), Color(0xFFB59BEB), []),
+      EntryKind.academy: ChildTone(Color(0xFF1E2A3B), Color(0xFFC4DAF6), Color(0xFF7DB2EC), []),
+      EntryKind.activity: ChildTone(Color(0xFF1A3328), Color(0xFFBCE8D3), Color(0xFF5FCB9C), []),
+      EntryKind.care: ChildTone(Color(0xFF3A2519), Color(0xFFF8D2BF), Color(0xFFF5A07A), []),
+      EntryKind.etc: ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), []),
+    },
     canvas: Color(0xFF111113),
     surface: Color(0xFF1C1C1F),
     surfaceMuted: Color(0xFF242428),

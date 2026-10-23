@@ -48,6 +48,41 @@ List<Gap> findGaps(List<Entry> dayEntries, {int minMinutes = 20}) {
   return gaps;
 }
 
+/// 시간 비례 보기에서 같은 요일에 시간이 겹치는 일정(예: 학교가 끝나기 전에 시작하는 돌봄)을
+/// 나란히 놓기 위한 자리 배정. id → (몇 번째 줄, 그 무리의 줄 수).
+/// 겹치는 일정끼리 한 무리로 묶고, 무리 안에서만 폭을 나눈다(안 겹치는 일정은 폭을 다 쓴다).
+Map<String, ({int lane, int lanes})> assignLanes(List<Entry> dayEntries) {
+  final sorted = [...dayEntries]
+    ..sort((a, b) => a.start != b.start ? a.start.compareTo(b.start) : b.end.compareTo(a.end));
+  final result = <String, ({int lane, int lanes})>{};
+  var cluster = <(Entry, int)>[];
+  var laneEnds = <int>[];
+  var clusterEnd = -1;
+
+  void flush() {
+    for (final (e, lane) in cluster) {
+      result[e.id] = (lane: lane, lanes: laneEnds.length);
+    }
+    cluster = [];
+    laneEnds = [];
+  }
+
+  for (final e in sorted) {
+    if (cluster.isNotEmpty && e.start >= clusterEnd) flush();
+    var lane = laneEnds.indexWhere((end) => end <= e.start);
+    if (lane < 0) {
+      lane = laneEnds.length;
+      laneEnds.add(e.end);
+    } else {
+      laneEnds[lane] = e.end;
+    }
+    cluster.add((e, lane));
+    clusterEnd = cluster.length == 1 ? e.end : (e.end > clusterEnd ? e.end : clusterEnd);
+  }
+  flush();
+  return result;
+}
+
 /// 학교 일정은 교시가 이어져 있어서 하루에 6~7칸이 된다. "오늘" 화면에서는
 /// 한 덩어리("학교 9:00~14:30 · 6교시")로 접어서 보여준다.
 class DayBlock {

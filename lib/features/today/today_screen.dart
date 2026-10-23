@@ -223,7 +223,7 @@ class _ChildDayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final rows = <({int start, Widget widget})>[
-      for (final b in day.blocks) (start: b.start, widget: _BlockRow(block: b, tone: p.child(day.child.colorIndex))),
+      for (final b in day.blocks) (start: b.start, widget: _BlockRow(block: b, tone: p.kind(b.first.kind))),
       for (final g in day.gaps) (start: g.start, widget: _GapRow(gap: g)),
     ]..sort((a, b) => a.start.compareTo(b.start));
 

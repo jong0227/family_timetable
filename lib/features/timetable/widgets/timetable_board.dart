@@ -6,6 +6,8 @@ import '../../../core/design/design.dart';
 import '../../../domain/models.dart';
 import '../entry_editor_sheet.dart';
 import '../school_week_sheet.dart';
+import '../week_view_mode.dart';
+import 'time_scale_grid.dart';
 import 'week_grid.dart';
 
 /// 시간표 한 벌(버전 하나)을 보여주고 고치는 판. 시간표 탭(현재 버전)과
@@ -26,11 +28,18 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
     final canEdit = ref.watch(permissionsProvider).canEditEntries(widget.child);
+    final mode = ref.watch(weekViewModeProvider);
     final v = widget.version;
     final hasWeekend = v.entries.any((e) => e.weekday >= 6);
     final showWeekend = _showWeekendOverride ?? hasWeekend;
+    final weekdays = showWeekend ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5];
+    final ValueChanged<Entry>? onTapEntry = canEdit
+        ? (e) => showEntryEditor(context, child: widget.child, version: v, entry: e)
+        : null;
+    final ValueChanged<int>? onTapDay = canEdit
+        ? (d) => showEntryEditor(context, child: widget.child, version: v, weekday: d)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,16 +84,25 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                             : '"일정 추가"로 등원·하원 시간부터 넣어 보세요.')
                       : null,
                 )
-              : WeekGrid(
-                  entries: v.entries,
-                  tone: p.child(widget.child.colorIndex),
-                  weekdays: showWeekend ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5],
-                  onTapEntry: canEdit
-                      ? (e) => showEntryEditor(context, child: widget.child, version: v, entry: e)
-                      : null,
-                  onTapDay: canEdit
-                      ? (d) => showEntryEditor(context, child: widget.child, version: v, weekday: d)
-                      : null,
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PillTabs<WeekViewMode>(
+                        items: [for (final m in WeekViewMode.values) (m, m.label, null)],
+                        selected: mode,
+                        onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
+                      ),
+                    ),
+                    const SizedBox(height: AppGap.md),
+                    if (mode == WeekViewMode.timeScale)
+                      TimeScaleGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay)
+                    else
+                      WeekGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay),
+                    const SizedBox(height: AppGap.md),
+                    KindLegend(entries: v.entries),
+                  ],
                 ),
         ),
       ],

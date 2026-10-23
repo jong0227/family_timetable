@@ -81,7 +81,6 @@ class RevisionsScreen extends ConsumerWidget {
               const SizedBox(height: AppGap.lg),
               WeekGrid(
                 entries: r.entries,
-                tone: ctx.palette.child(child.colorIndex),
                 weekdays: r.entries.any((e) => e.weekday >= 6) ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5],
               ),
               const SizedBox(height: AppGap.xl),
