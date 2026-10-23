@@ -52,7 +52,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               .nonNulls
               .fold<DayBlock?>(null, (best, b) => best == null || b.start < best.start ? b : best);
 
-    return PageBody(
+    final page = PageBody(
       children: [
         PageHeader(
           title: isToday ? '오늘' : '${weekdayLabel(weekday)}요일',
@@ -100,7 +100,34 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
         ],
       ],
     );
+
+    // 좌우로 밀면 요일이 넘어간다(왼쪽으로 밀면 다음 날, 일요일 다음은 월요일 — 실사용 요청).
+    // 위쪽 자녀 카드(PageView)는 자기 안에서 받은 가로 밀기를 먼저 가져가므로 자녀 넘기기와 겹치지 않는다.
+    // 세로 스크롤은 가로 드래그만 듣는 이 감지기와 다투지 않는다.
+    if (children.isEmpty) return page;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (_) => _dragDx = 0,
+      onHorizontalDragUpdate: (d) => _dragDx += d.delta.dx,
+      // 빠르게 튕기거나(속도) 천천히 충분히 밀거나(거리) 둘 중 하나면 넘긴다.
+      // 속도만 보면 천천히 민 손가락은 속도가 0에 가까워 넘어가지 않았다(미리보기에서 발견).
+      onHorizontalDragEnd: (d) {
+        final v = d.primaryVelocity ?? 0;
+        final left = v <= -_swipeVelocity || _dragDx <= -_swipeDistance;
+        final right = v >= _swipeVelocity || _dragDx >= _swipeDistance;
+        if (left == right) return;
+        pick(left ? weekday % 7 + 1 : (weekday + 5) % 7 + 1);
+      },
+      child: page,
+    );
   }
+
+  /// 이보다 느린 가로 움직임은 요일 넘기기로 보지 않는다(살짝 비스듬한 세로 스크롤을 오인하지 않게).
+  static const _swipeVelocity = 300.0;
+  static const _swipeDistance = 80.0;
+
+  /// 지금 가로 밀기에서 손가락이 움직인 거리(+ 오른쪽).
+  double _dragDx = 0;
 
   String _subtitle(DaySummary s) {
     if (s.blockCount == 0) return '이날은 일정이 없어요';
