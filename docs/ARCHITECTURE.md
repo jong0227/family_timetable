@@ -73,6 +73,7 @@ Moneycraft는 가족 데이터를 **문서 하나**에 통째로 넣었지만, �
 | `children` | 자녀 프로필, `currentVersionId` | 표시(`deleted`) |
 | `versions` | 이름 붙은 시간표 한 벌(일정 목록 포함) | 표시(`deleted`) |
 | `revisions` | 버전의 수정 기록(고친 뒤 상태 스냅샷) | 버전당 50개 넘으면 오래된 것부터 삭제 |
+| `comments` | 일정 댓글(`entryId`에 붙음, 작성자·시각) | 본인 또는 보호자가 삭제 |
 | (루트 문서) | `schemaVersion`, `createdAt` | — |
 
 ### 버전과 수정 기록 (이 앱의 핵심 규칙)

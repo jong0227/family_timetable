@@ -28,4 +28,10 @@ class Permissions {
   bool get canManageChildren => isParent;
 
   bool get canManageMembers => isParent;
+
+  /// 댓글은 가족이면 누구나(아이도). "특별한 일"을 아이가 직접 남기는 게 목적이다.
+  bool get canComment => me != null;
+
+  /// 지우기는 쓴 사람 본인 또는 보호자.
+  bool canDeleteComment(Comment c) => isParent || (me != null && c.authorId == me!.id);
 }

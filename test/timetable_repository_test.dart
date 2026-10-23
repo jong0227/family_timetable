@@ -1,6 +1,7 @@
 import 'package:family_timetable/data/family_store.dart';
 import 'package:family_timetable/data/timetable_repository.dart';
 import 'package:family_timetable/domain/models.dart';
+import 'package:family_timetable/domain/permissions.dart';
 import 'package:family_timetable/domain/timetable_logic.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -229,6 +230,53 @@ void main() {
     final j = v.toJson();
     expect(j['startDate'], '2027-07-21');
     expect(TimetableVersion.fromJson(j).endDate, DateTime(2027, 8, 18));
+  });
+
+  group('댓글', () {
+    test('일정에 댓글을 달고 지울 수 있다, 빈 글은 무시', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      final v = await repo.upsertEntry(await versionById(child.currentVersionId!), piano());
+      final kid = Member(id: 'k', name: '이서원', role: MemberRole.child, childId: child.id, updatedAt: DateTime(2026));
+
+      final c = await repo.addComment(version: v, entry: v.entries.single, author: kid, text: '  오늘 30분 늦게 끝나요 ');
+      expect(c!.text, '오늘 30분 늦게 끝나요');
+      expect(c.entryId, 'e1');
+      expect(await repo.addComment(version: v, entry: v.entries.single, author: kid, text: '   '), isNull);
+      expect(await store.read(Collections.comments), hasLength(1));
+
+      await repo.deleteComment(c);
+      expect(await store.read(Collections.comments), isEmpty);
+    });
+
+    test('되돌리기를 해도 일정 id가 같아 댓글이 그대로 붙어 있다', () async {
+      final child = await repo.addChild(name: '첫째', institution: Institution.elementary, colorIndex: 0, order: 0);
+      var v = await repo.upsertEntry(await versionById(child.currentVersionId!), piano());
+      final firstState = (await revisionsOf(v.id)).first;
+      v = await repo.upsertEntry(v, piano().copyWith(title: '바이올린'));
+      v = await repo.restoreRevision(v, firstState);
+      expect(v.entries.single.id, 'e1');
+    });
+
+    test('권한: 가족이면 누구나 쓰고, 지우기는 본인 또는 보호자', () {
+      final kid = Member(id: 'k', name: '아이', role: MemberRole.child, childId: 'a', updatedAt: DateTime(2026));
+      final dad = Member(id: 'd', name: '아빠', role: MemberRole.parent, updatedAt: DateTime(2026));
+      final other = Member(id: 'o', name: '동생', role: MemberRole.child, childId: 'b', updatedAt: DateTime(2026));
+      final c = Comment(
+        id: 'c',
+        entryId: 'e',
+        versionId: 'v',
+        childId: 'a',
+        authorId: 'k',
+        authorName: '아이',
+        text: '늦어요',
+        createdAt: DateTime(2026),
+      );
+      expect(Permissions(kid).canComment, isTrue);
+      expect(const Permissions(null).canComment, isFalse);
+      expect(Permissions(kid).canDeleteComment(c), isTrue);
+      expect(Permissions(dad).canDeleteComment(c), isTrue);
+      expect(Permissions(other).canDeleteComment(c), isFalse);
+    });
   });
 
   test('수정 기록은 버전마다 최대 개수까지만 남는다', () async {

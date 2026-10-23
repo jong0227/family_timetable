@@ -44,6 +44,39 @@ void main() {
     expect(shortTitle('수학'), '수학');
   });
 
+  group('학교 시간 접기', () {
+    Entry p(int d, int s, int en, int period) => e(d, s, en, '수업', kind: EntryKind.school, period: period);
+
+    test('학교 시간대 전체를 접는다', () {
+      expect(schoolFolds([p(1, 540, 580, 1), p(1, 780, 820, 5), e(1, 900, 960, '피아노')]), [(540, 820)]);
+    });
+
+    test('다른 일정이 걸친 시간은 접지 않는다(일요일 학원, 일찍 끝난 날 늘봄)', () {
+      final folds = schoolFolds([
+        p(1, 540, 580, 1),
+        p(1, 830, 870, 6), // 월요일은 14:30까지
+        e(7, 610, 670, '삼성'), // 일요일 10:10~11:10
+        e(3, 730, 820, '늘봄'), // 수요일 12:10~13:40
+      ]);
+      expect(folds, [(540, 610), (670, 730), (820, 870)]);
+    });
+
+    test('짧은 틈은 접지 않는다', () {
+      expect(schoolFolds([p(1, 540, 600, 1), e(2, 560, 590, '돌봄')], minMinutes: 30), isEmpty);
+    });
+
+    test('세로축: 접힌 구간은 정해진 높이만 차지한다', () {
+      const axis = TimeAxis(start: 540, end: 960, folds: [(540, 820)], pxPerMinute: 1, foldHeight: 40);
+      expect(axis.y(540), 0);
+      expect(axis.y(680), 20, reason: '접힌 구간 안은 비례로 눌린다');
+      expect(axis.y(820), 40);
+      expect(axis.y(900), 120, reason: '접힌 뒤로는 1분 = 1px');
+      expect(axis.height, 180);
+      expect(axis.isFolded(600), isTrue);
+      expect(axis.isFolded(820), isFalse);
+    });
+  });
+
   group('시간 비례 보기 자리 배정', () {
     test('안 겹치면 각자 폭을 다 쓴다', () {
       final lanes = assignLanes([e(1, 540, 580, '국어'), e(1, 590, 630, '수학'), e(1, 900, 960, '피아노')]);

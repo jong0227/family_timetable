@@ -177,6 +177,33 @@ class TimetableRepository {
     }
   }
 
+  // ── 댓글 ───────────────────────────────────────────────
+
+  /// 일정에 댓글 달기. 빈 글은 무시한다(null).
+  Future<Comment?> addComment({
+    required TimetableVersion version,
+    required Entry entry,
+    required Member author,
+    required String text,
+  }) async {
+    final body = text.trim();
+    if (body.isEmpty) return null;
+    final c = Comment(
+      id: newId(),
+      entryId: entry.id,
+      versionId: version.id,
+      childId: version.childId,
+      authorId: author.id,
+      authorName: author.name,
+      text: body,
+      createdAt: DateTime.now(),
+    );
+    await store.put(Collections.comments, c.id, c.toJson());
+    return c;
+  }
+
+  Future<void> deleteComment(Comment c) => store.remove(Collections.comments, c.id);
+
   // ── 일정 + 수정 기록 ────────────────────────────────────
 
   /// 버전의 일정을 통째로 바꾸고, 바뀐 뒤 상태를 수정 기록으로 남긴다.

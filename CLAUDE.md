@@ -9,8 +9,8 @@
 - **M0 기반, M1 시간표 입력·학기·수정 기록 완료 (2026-10-23)**. 다음은 **M2 가족 운영**(픽업 담당·알림) → `docs/ROADMAP.md`
 - 저장소: https://github.com/jong0227/family_timetable (private). M1은 브랜치 `m1-timetable-editing`
 - 디자인 미리보기: `tool/preview_web.bat` → 브라우저 localhost:5173 (웹은 메모리 저장, 새로고침하면 초기화). 디버그 빌드 빈 화면의 "개발용: 샘플 가족 채우기"로 데이터 채우기
-- Firebase 콘솔에 `com.family.timetable` 앱 등록 + `android/app/google-services.json` 아직 안 함
-  → 그 전까지는 로컬 모드로만 동작. 절차: `docs/FIREBASE_SETUP.md`
+- Firebase 연결 완료(2026-10-23). 규칙·설정: `docs/FIREBASE_SETUP.md`
+- 앱 안 업데이트: 공개 저장소의 GitHub 릴리스를 앱이 읽는다 → **릴리스 태그 버전(vX.Y.Z)이 pubspec 버전과 같아야** 업데이트가 뜬다
 - 실기기(플립·폴드) 확인 아직 못 함.
 
 ## 반드시 먼저 읽을 문서

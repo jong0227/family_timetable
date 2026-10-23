@@ -200,3 +200,29 @@ class StatusDot extends StatelessWidget {
     decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
+
+/// 카드 묶음 위 머리말(예: "댓글 3"). 오른쪽에 숫자나 작은 동작 하나를 붙일 수 있다.
+class SectionHeader extends StatelessWidget {
+  final String title;
+  final Widget? trailing;
+
+  const SectionHeader(this.title, {super.key, this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, AppGap.xl, 4, AppGap.sm),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w800),
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+}

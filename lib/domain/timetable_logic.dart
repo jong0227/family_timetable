@@ -48,6 +48,68 @@ List<Gap> findGaps(List<Entry> dayEntries, {int minMinutes = 20}) {
   return gaps;
 }
 
+/// 시간 비례 보기에서 "학교 시간 접기"로 접을 구간들.
+///
+/// 학교 교시가 있는 시간대(가장 이른 교시 시작 ~ 가장 늦은 교시 끝) 중에서, **어느 요일이든 학교 말고 다른
+/// 일정이 있는 시간은 빼고** 남은 구간만 접는다. 그래야 일요일 10시 학원, 일찍 끝나는 날의 늘봄처럼
+/// 학교 시간대에 걸친 다른 일정이 접힌 틈에 숨지 않는다. [minMinutes]보다 짧은 구간은 접어 봐야
+/// 줄어드는 게 없어서 그대로 둔다.
+List<(int start, int end)> schoolFolds(List<Entry> entries, {int minMinutes = 30}) {
+  bool isPeriod(Entry e) => e.kind == EntryKind.school && e.period != null;
+  final school = entries.where(isPeriod).toList();
+  if (school.isEmpty) return const [];
+  final spanStart = school.map((e) => e.start).reduce((a, b) => a < b ? a : b);
+  final spanEnd = school.map((e) => e.end).reduce((a, b) => a > b ? a : b);
+
+  final busy = entries.where((e) => !isPeriod(e) && e.end > spanStart && e.start < spanEnd).toList()
+    ..sort((a, b) => a.start.compareTo(b.start));
+  final folds = <(int, int)>[];
+  var cursor = spanStart;
+  for (final b in busy) {
+    if (b.start - cursor >= minMinutes) folds.add((cursor, b.start));
+    if (b.end > cursor) cursor = b.end;
+  }
+  if (spanEnd - cursor >= minMinutes) folds.add((cursor, spanEnd));
+  return folds;
+}
+
+/// 시간 비례 보기의 세로축. 접힌 구간([folds])은 실제 길이와 상관없이 [foldHeight]만 차지하고,
+/// 나머지는 1분 = [pxPerMinute]픽셀이다.
+class TimeAxis {
+  final int start;
+  final int end;
+  final List<(int start, int end)> folds;
+  final double pxPerMinute;
+  final double foldHeight;
+
+  const TimeAxis({
+    required this.start,
+    required this.end,
+    this.folds = const [],
+    required this.pxPerMinute,
+    this.foldHeight = 0,
+  });
+
+  /// [minutes] 시각의 세로 위치(px).
+  double y(int minutes) {
+    var y = 0.0;
+    var at = start;
+    for (final (a, b) in folds) {
+      if (minutes <= a) break;
+      y += (a - at) * pxPerMinute;
+      if (minutes < b) return y + (minutes - a) / (b - a) * foldHeight;
+      y += foldHeight;
+      at = b;
+    }
+    return y + (minutes - at) * pxPerMinute;
+  }
+
+  double get height => y(end);
+
+  /// 접힌 구간 한가운데(양 끝 제외)인가 — 정시 눈금을 그리지 않을 자리.
+  bool isFolded(int minutes) => folds.any((f) => minutes > f.$1 && minutes < f.$2);
+}
+
 /// 시간 비례 보기에서 같은 요일에 시간이 겹치는 일정(예: 학교가 끝나기 전에 시작하는 돌봄)을
 /// 나란히 놓기 위한 자리 배정. id → (몇 번째 줄, 그 무리의 줄 수).
 /// 겹치는 일정끼리 한 무리로 묶고, 무리 안에서만 폭을 나눈다(안 겹치는 일정은 폭을 다 쓴다).

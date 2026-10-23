@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/design/design.dart';
 import '../../../domain/models.dart';
+import '../entry_detail_screen.dart';
 import '../entry_editor_sheet.dart';
 import '../school_week_sheet.dart';
 import '../week_view_mode.dart';
@@ -34,9 +35,15 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
     final hasWeekend = v.entries.any((e) => e.weekday >= 6);
     final showWeekend = _showWeekendOverride ?? hasWeekend;
     final weekdays = showWeekend ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5];
-    final ValueChanged<Entry>? onTapEntry = canEdit
-        ? (e) => showEntryEditor(context, child: widget.child, version: v, entry: e)
-        : null;
+    // 칸을 누르면 누구든(보기만 하는 가족·아이도) 상세 + 댓글로. 고치는 건 상세의 "편집"에서만.
+    void onTapEntry(Entry e) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => EntryDetailScreen(versionId: v.id, entryId: e.id),
+      ),
+    );
+    final commentCounts = ref.watch(commentCountsProvider);
+    final foldSchool = ref.watch(foldSchoolProvider);
+    final hasSchoolPeriods = v.entries.any((e) => e.kind == EntryKind.school && e.period != null);
     final ValueChanged<int>? onTapDay = canEdit
         ? (d) => showEntryEditor(context, child: widget.child, version: v, weekday: d)
         : null;
@@ -87,17 +94,33 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: PillTabs<WeekViewMode>(
-                        items: [for (final m in WeekViewMode.values) (m, m.label, null)],
-                        selected: mode,
-                        onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
-                      ),
+                    Row(
+                      children: [
+                        PillTabs<WeekViewMode>(
+                          items: [for (final m in WeekViewMode.values) (m, m.label, null)],
+                          selected: mode,
+                          onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
+                        ),
+                        const Spacer(),
+                        if (mode == WeekViewMode.timeScale && hasSchoolPeriods)
+                          TextButton.icon(
+                            onPressed: () => ref.read(foldSchoolProvider.notifier).toggle(),
+                            icon: Icon(foldSchool ? Icons.unfold_more_rounded : Icons.unfold_less_rounded, size: 18),
+                            label: Text(foldSchool ? '학교 펼치기' : '학교 접기'),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: AppGap.md),
                     if (mode == WeekViewMode.timeScale)
-                      TimeScaleGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay)
+                      TimeScaleGrid(
+                        entries: v.entries,
+                        weekdays: weekdays,
+                        onTapEntry: onTapEntry,
+                        onTapDay: onTapDay,
+                        commentCounts: commentCounts,
+                        foldSchool: foldSchool,
+                        onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
+                      )
                     else
                       WeekGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay),
                     const SizedBox(height: AppGap.md),

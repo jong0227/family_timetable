@@ -11,7 +11,10 @@ class Collections {
   static const children = 'children';
   static const versions = 'versions';
   static const revisions = 'revisions';
-  static const all = [members, children, versions, revisions];
+
+  /// 일정 댓글(스키마 버전과 무관: 새 컬렉션이라 옛 앱은 그냥 못 볼 뿐 데이터를 망가뜨리지 않는다).
+  static const comments = 'comments';
+  static const all = [members, children, versions, revisions, comments];
 }
 
 /// 데이터를 어디에 두든(이 폰의 파일 / Firestore 가족 문서) 화면과 로직은 이

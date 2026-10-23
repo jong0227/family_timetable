@@ -82,6 +82,27 @@ final repositoryProvider = Provider<TimetableRepository>(
   (ref) => TimetableRepository(ref.watch(storeProvider), actorName: ref.watch(meProvider)?.name ?? '알 수 없음'),
 );
 
+final commentsProvider = StreamProvider<List<Comment>>(
+  (ref) => ref
+      .watch(storeProvider)
+      .watch(Collections.comments)
+      .map((m) => m.values.map(Comment.fromJson).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt))),
+);
+
+/// 일정 하나의 댓글(오래된 것부터 — 대화처럼 아래로 쌓인다).
+final entryCommentsProvider = Provider.family<List<Comment>, String>(
+  (ref, entryId) => (ref.watch(commentsProvider).valueOrNull ?? const []).where((c) => c.entryId == entryId).toList(),
+);
+
+/// 일정 id → 댓글 수(시간표 칸에 점 표시용).
+final commentCountsProvider = Provider<Map<String, int>>((ref) {
+  final counts = <String, int>{};
+  for (final c in ref.watch(commentsProvider).valueOrNull ?? const <Comment>[]) {
+    counts[c.entryId] = (counts[c.entryId] ?? 0) + 1;
+  }
+  return counts;
+});
+
 /// 지금 설치된 앱 버전.
 final appVersionProvider = FutureProvider<AppVersion>((_) async {
   final info = await PackageInfo.fromPlatform();

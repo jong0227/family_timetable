@@ -3,7 +3,9 @@
 Moneycraft가 쓰는 Firebase 프로젝트 **`kids-allowance-48c8e`** 를 같이 쓴다.
 데이터는 `timetable_families` 컬렉션에 따로 들어가서 Moneycraft의 `families`와 섞이지 않는다.
 
-이 설정 전에도 앱은 **로컬 모드**(이 폰에만 저장)로 빌드·실행된다.
+✅ 2026-10-23 완료: 앱 등록(App ID 1:825299834904:android:07088e467b231c84798b6d), google-services.json 커밋,
+규칙 배포. 규칙을 바꿀 땐 `firestore.rules`를 고친 뒤 `firebase deploy --only firestore:rules`
+(PowerShell에서 npm 스크립트가 막혀 있으면 `firebase.cmd` 경로로 실행). **Moneycraft families 블록은 지우지 말 것.**
 
 ## 1. 콘솔에서 Android 앱 등록 (직접 해야 함)
 1. https://console.firebase.google.com → `kids-allowance-48c8e` → 프로젝트 설정 → **앱 추가 → Android**

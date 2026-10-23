@@ -454,3 +454,52 @@ List<Entry> entriesFromJson(dynamic raw) {
       if (e is Map) Entry.fromJson(Map<String, dynamic>.from(e)),
   ];
 }
+
+/// 일정 하나에 달린 댓글. "오늘 피아노 30분 늦게 끝나요", "체육복 챙겨야 해요"처럼
+/// 그 일정에 생긴 특별한 일을 가족(아이 포함)이 남긴다.
+///
+/// 일정 id([entryId])에 붙는다. 수정 기록으로 되돌려도 일정 id는 그대로라 댓글이 따라온다.
+/// 새 학기로 복제하면 일정이 새 id를 받으므로 지난 학기 댓글은 지난 학기 일정에 남는다.
+class Comment {
+  final String id;
+  final String entryId;
+  final String versionId;
+  final String childId;
+  final String authorId;
+  final String authorName;
+  final String text;
+  final DateTime createdAt;
+
+  const Comment({
+    required this.id,
+    required this.entryId,
+    required this.versionId,
+    required this.childId,
+    required this.authorId,
+    required this.authorName,
+    required this.text,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'entryId': entryId,
+    'versionId': versionId,
+    'childId': childId,
+    'authorId': authorId,
+    'authorName': authorName,
+    'text': text,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory Comment.fromJson(Map<String, dynamic> j) => Comment(
+    id: j['id'] as String,
+    entryId: (j['entryId'] as String?) ?? '',
+    versionId: (j['versionId'] as String?) ?? '',
+    childId: (j['childId'] as String?) ?? '',
+    authorId: (j['authorId'] as String?) ?? '',
+    authorName: (j['authorName'] as String?) ?? '',
+    text: (j['text'] as String?) ?? '',
+    createdAt: _parseDate(j['createdAt']),
+  );
+}

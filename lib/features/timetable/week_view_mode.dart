@@ -20,7 +20,7 @@ class WeekViewModeController extends Notifier<WeekViewMode> {
   @override
   WeekViewMode build() {
     final saved = ref.read(bootstrapProvider).prefs.getString(_key);
-    return WeekViewMode.values.where((m) => m.name == saved).firstOrNull ?? WeekViewMode.compact;
+    return WeekViewMode.values.where((m) => m.name == saved).firstOrNull ?? WeekViewMode.timeScale;
   }
 
   Future<void> set(WeekViewMode mode) async {
@@ -30,3 +30,19 @@ class WeekViewModeController extends Notifier<WeekViewMode> {
 }
 
 final weekViewModeProvider = NotifierProvider<WeekViewModeController, WeekViewMode>(WeekViewModeController.new);
+
+/// 시간 비례 보기에서 학교 시간대를 접을지. 기본은 접힘(학교에 있는 동안은 챙길 게 없어서).
+/// 이 폰에 기억된다.
+class FoldSchoolController extends Notifier<bool> {
+  static const _key = 'foldSchool';
+
+  @override
+  bool build() => ref.read(bootstrapProvider).prefs.getBool(_key) ?? true;
+
+  Future<void> toggle() async {
+    state = !state;
+    await ref.read(bootstrapProvider).prefs.setBool(_key, state);
+  }
+}
+
+final foldSchoolProvider = NotifierProvider<FoldSchoolController, bool>(FoldSchoolController.new);
