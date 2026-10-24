@@ -91,6 +91,78 @@ class _DockButton extends StatelessWidget {
   }
 }
 
+/// 요일 고르기 띠: 월~일 7칸이 **항상 화면 폭 안에 다 들어간다**(가로 스크롤 없음).
+///
+/// 예전엔 [PillTabs]("금 · 오늘")를 썼는데 폭이 화면보다 넓어 가로로 스크롤됐다. 그래서 좌우로 밀어
+/// 토·일로 가면 고른 칸이 화면 밖에 있어 바뀐 게 안 보였고, 띠 위에서 밀면 띠가 스크롤되며 요일이 안 넘어갔다
+/// (실사용 버그). 오늘은 글자 대신 아래 점으로 표시해 칸 폭이 늘지 않게 한다.
+class WeekdayStrip extends StatelessWidget {
+  final int selected;
+  final int today;
+  final ValueChanged<int> onChanged;
+
+  const WeekdayStrip({super.key, required this.selected, required this.today, required this.onChanged});
+
+  static const _labels = ['월', '화', '수', '목', '금', '토', '일'];
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(AppGap.xs),
+      decoration: BoxDecoration(color: p.surface, borderRadius: BorderRadius.circular(AppRadius.pill)),
+      child: Row(
+        children: [
+          for (var d = 1; d <= 7; d++)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: d == selected,
+                label: '${_labels[d - 1]}요일${d == today ? ', 오늘' : ''}',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(d),
+                  child: AnimatedContainer(
+                    duration: AppMotion.fast,
+                    curve: AppMotion.curve,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: d == selected ? p.dock : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _labels[d - 1],
+                          style: TextStyle(
+                            fontSize: AppText.label,
+                            fontWeight: FontWeight.w700,
+                            color: d == selected ? p.onDock : null,
+                          ),
+                        ),
+                        // 오늘 표시(고른 칸이면 반전 색). 자리는 늘 잡아 둬서 칸 높이가 흔들리지 않는다.
+                        const SizedBox(height: 2),
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: d != today ? Colors.transparent : (d == selected ? p.onDock : p.status.positive),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 알약 세그먼트 탭(검은 알약이 선택). 레퍼런스 상단의 "Dashboard | Tasks | Calendar".
 /// 자녀 고르기·보기 방식 바꾸기 등 "같은 화면 안 전환"에 쓴다.
 class PillTabs<T> extends StatelessWidget {

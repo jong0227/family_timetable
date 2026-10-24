@@ -42,6 +42,9 @@ class PageHeader extends StatelessWidget {
 
   /// 오른쪽 큰 글씨(예: "목요일")
   final String? asideMain;
+
+  /// 주면 [asideMain] 자리에 대신 놓는다(예: 다른 요일을 볼 때 "오늘로"). 제목 칸보다 낮아서 줄 높이가 안 바뀐다.
+  final Widget? asideAction;
   final List<Widget> actions;
 
   const PageHeader({
@@ -50,6 +53,7 @@ class PageHeader extends StatelessWidget {
     this.subtitle,
     this.asideTop,
     this.asideMain,
+    this.asideAction,
     this.actions = const [],
   });
 
@@ -89,10 +93,11 @@ class PageHeader extends StatelessWidget {
                     asideTop!,
                     style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
                   ),
-                Text(
-                  asideMain!,
-                  style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
-                ),
+                asideAction ??
+                    Text(
+                      asideMain!,
+                      style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
+                    ),
               ],
             ),
         ],

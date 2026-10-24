@@ -59,6 +59,18 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           subtitle: children.isEmpty ? '아이를 추가하면 하루 일정이 여기 모여요' : _subtitle(summary),
           asideTop: '${now.month}월 ${now.day}일',
           asideMain: '${weekdayLabel(now.weekday)}요일',
+          // 다른 요일을 볼 때만 "오늘로". 예전엔 요일 띠 옆에 붙어 띠 폭이 줄었다 늘었다 했다(실사용 버그).
+          asideAction: isToday
+              ? null
+              : ActionChip(
+                  // 머리 줄 높이 안에 들어가게 납작하게(기본 48dp 터치 여백이면 머리가 커져 아래 띠가 3px 밀렸다 —
+                  // 테스트로 발견). 요일은 띠·밀기로도 바꿀 수 있어 보조 버튼으로 충분하다.
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  avatar: const Icon(Icons.undo_rounded, size: 16),
+                  label: const Text('오늘로'),
+                  onPressed: () => pick(now.weekday),
+                ),
         ),
         // 아이가 없으면 안내만. (예전엔 개발용 버튼이 없는 릴리스에서 아래 KPI·빈 카드까지 같이 그려졌다)
         if (children.isEmpty) ...[
@@ -78,21 +90,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             Kpi(isToday ? '다음 일정' : '첫 일정', next == null ? '—' : formatMinutes(next.start)),
             Kpi('빈 시간', '${summary.gapCount}', dot: summary.gapCount > 0 ? p.status.urgent : null),
           ]),
-          Row(
-            children: [
-              Expanded(
-                child: PillTabs<int>(
-                  items: [
-                    for (var d = 1; d <= 7; d++)
-                      (d, d == now.weekday ? '${weekdayLabel(d)} · 오늘' : weekdayLabel(d), null),
-                  ],
-                  selected: weekday,
-                  onChanged: pick,
-                ),
-              ),
-              if (!isToday) TextButton(onPressed: () => pick(now.weekday), child: const Text('오늘로')),
-            ],
-          ),
+          WeekdayStrip(selected: weekday, today: now.weekday, onChanged: pick),
           const SizedBox(height: AppGap.lg),
           _HeroPager(days: summary.children, isToday: isToday),
           const SizedBox(height: AppGap.md),

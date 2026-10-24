@@ -1,6 +1,7 @@
 import 'package:family_timetable/app/bootstrap.dart';
 import 'package:family_timetable/app/providers.dart';
 import 'package:family_timetable/core/design/app_theme.dart';
+import 'package:family_timetable/core/design/components/navigation.dart';
 import 'package:family_timetable/core/design/palette.dart';
 import 'package:family_timetable/data/family_store.dart';
 import 'package:family_timetable/data/timetable_repository.dart';
@@ -59,6 +60,30 @@ void main() {
     await tester.fling(find.byType(TodayScreen), const Offset(150, 0), 1000);
     await tester.pump();
     expect(find.text(dayTitle(prev(today))), findsOneWidget);
+  });
+
+  testWidgets('좁은 폰(360px)에서 요일 띠가 화면 안에 다 들어가고, 넘겨도 크기가 안 변하며, 띠 위에서 밀어도 넘어간다', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpToday(tester);
+    final today = DateTime.now().weekday;
+    final strip = find.byType(WeekdayStrip);
+    final before = tester.getRect(strip);
+    expect(before.right, lessThanOrEqualTo(360), reason: '7칸이 다 화면 안(가로 스크롤 없음)');
+
+    // 띠 위에서 왼쪽으로 민다 → 다음 날 (예전엔 띠가 스크롤되며 요일이 안 넘어갔다)
+    await tester.timedDrag(strip, const Offset(-200, 0), const Duration(milliseconds: 600));
+    await tester.pump();
+    expect(find.text(dayTitle(next(today))), findsOneWidget);
+    expect(tester.getRect(strip), before, reason: '오늘에서 벗어나도 띠 크기·위치가 그대로("오늘로"가 띠 옆에 끼지 않는다)');
+
+    // 한 바퀴(7번) 밀면 다시 오늘
+    for (var i = 0; i < 6; i++) {
+      await tester.fling(find.byType(TodayScreen), const Offset(-150, 0), 1000);
+      await tester.pump();
+    }
+    expect(find.text('오늘'), findsOneWidget);
   });
 
   testWidgets('조금만 움직인 건 넘기지 않는다', (tester) async {
