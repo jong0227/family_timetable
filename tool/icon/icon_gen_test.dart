@@ -2,8 +2,8 @@
 //
 //   flutter test tool/icon/icon_gen_test.dart
 //
-// 모양: 앱 하단 내비와 같은 검은 바탕 위에 흰 시간표 카드. 머리띠는 첫째 자녀색(장미),
-// 칸은 종류색(학원 하늘·학교 노랑·활동 민트·방과후 보라) — 앱 안 색 체계(DESIGN_SYSTEM 2장)를 그대로 쓴다.
+// 모양: 앱 하단 내비와 같은 검은 바탕 위에 흰 시간표 카드. 머리띠는 파랑(사용자 선택),
+// 칸은 앱 안 색(주황·노랑·민트·보라. 파랑 칸은 머리띠와 겹쳐 주황으로) — 앱 안 색 체계(DESIGN_SYSTEM 2장)를 그대로 쓴다.
 // 좌표는 적응형 아이콘의 108×108 공간. 안전 영역(가운데 지름 66 원) 안에 내용을 둔다.
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -13,13 +13,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _background = Color(0xFF151517); // palette.dock
 const _card = Color(0xFFFFFFFF);
-const _header = Color(0xFFE0698F); // 자녀색 0(장미)
+const _header = Color(0xFF3B7DDD); // 파란 계열(사용자 선택)
 const _ring = Color(0xFF151517);
 const _empty = Color(0xFFEFEFF1); // 종류색 기타(빈 칸)
 
 /// (열, 시작 줄, 줄 수, 색). 3열 × 3줄 시간표.
 const _blocks = [
-  (0, 0, 2, Color(0xFF5B9BE0)),
+  (0, 0, 2, Color(0xFFF08A5D)),
   (0, 2, 1, _empty),
   (1, 0, 1, Color(0xFFD9B23A)),
   (1, 1, 2, Color(0xFF3FB383)),
