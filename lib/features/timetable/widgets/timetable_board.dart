@@ -96,17 +96,15 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
               // 카드 머리 = 보기 방식 + 학교 교시 + 수정 기록. 예전엔 "주간 시간표 · 일정 N개" 제목 줄이 따로 있었다.
               Row(
                 children: [
-                  // 좁은 폰에선 보기 탭이 줄어들며 옆으로 밀린다(칩·단추는 그대로).
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: PillTabs<WeekViewMode>(
-                        items: [for (final m in WeekViewMode.values) (m, m.label, null)],
-                        selected: mode,
-                        onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
-                      ),
-                    ),
+                  // 보기 방식은 "간단히" 칩 하나: 켜면 간단히, 끄면 시간 비례(기본). 탭 두 개(간단히|시간 비례)는
+                  // 자리만 차지했다(실사용 요청).
+                  ToggleChip(
+                    label: WeekViewMode.compact.label,
+                    selected: mode == WeekViewMode.compact,
+                    onChanged: (on) =>
+                        ref.read(weekViewModeProvider.notifier).set(on ? WeekViewMode.compact : WeekViewMode.timeScale),
                   ),
+                  const SizedBox(width: AppGap.sm),
                   // 학교 다니는 아이면 교시가 아직 없어도 칩을 둔다(없으면 누를 때 교시 입력으로 안내).
                   // 교시가 있을 때만 보였더니 "교시 보기가 어딨냐"는 질문이 나왔다(실사용).
                   if (isTimeScale && (hasSchoolPeriods || widget.child.institution.hasPeriods))
@@ -124,6 +122,7 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                         }
                       },
                     ),
+                  const Spacer(),
                   ?widget.headerAction,
                 ],
               ),
