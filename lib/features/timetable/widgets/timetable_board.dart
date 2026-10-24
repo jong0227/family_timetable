@@ -115,11 +115,24 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
                         const Spacer(),
                         // 켜짐/꺼짐이 체크로 보이는 칩. 켜면 교시가 다 보이고, 끄면(기본) 학교 시간이 한 칸으로 접힌다.
                         // 예전 "학교 펼치기" 단추로는 어딜 눌러야 교시가 보이는지 몰랐다(실사용 피드백).
-                        if (isTimeScale && hasSchoolPeriods)
+                        // 학교 다니는 아이면 교시가 아직 없어도 칩을 둔다. 교시가 있을 때만 보였더니, 교시를 안 넣은
+                        // 시간표에선 "교시 보기가 어딨냐"는 질문이 나왔다(실사용). 없으면 누를 때 교시 입력으로 안내.
+                        if (isTimeScale && (hasSchoolPeriods || widget.child.institution.hasPeriods))
                           ToggleChip(
                             label: '학교 교시',
-                            selected: !foldSchool,
-                            onChanged: (_) => ref.read(foldSchoolProvider.notifier).toggle(),
+                            selected: hasSchoolPeriods && !foldSchool,
+                            onChanged: (_) {
+                              if (hasSchoolPeriods) {
+                                ref.read(foldSchoolProvider.notifier).toggle();
+                                return;
+                              }
+                              if (canPeriods) {
+                                showToast(context, '아직 교시가 없어요. 요일별 교시를 넣어 주세요');
+                                showSchoolWeekSheet(context, child: widget.child, version: v);
+                              } else {
+                                showToast(context, '이 시간표엔 아직 교시가 없어요');
+                              }
+                            },
                           ),
                       ],
                     ),

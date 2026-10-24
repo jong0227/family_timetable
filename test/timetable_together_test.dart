@@ -53,6 +53,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('피아노'), findsOneWidget);
     expect(find.text('수영'), findsNothing, reason: '아이 탭에선 그 아이 것만');
+    expect(find.text('학교 교시'), findsOneWidget, reason: '초등학생이면 교시를 아직 안 넣었어도 칩이 있다(어딨냐는 실사용 질문)');
 
     await tester.tap(find.text('함께'));
     await tester.pumpAndSettle();
