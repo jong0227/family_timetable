@@ -19,6 +19,9 @@ enum NowState {
 
 class ChildDay {
   final Child child;
+
+  /// 이날 일정이 나온 시간표(일정을 눌러 상세·댓글로 갈 때 쓴다).
+  final String? versionId;
   final String? versionName;
   final List<DayBlock> blocks;
   final List<Gap> gaps;
@@ -29,6 +32,7 @@ class ChildDay {
 
   const ChildDay({
     required this.child,
+    this.versionId,
     required this.versionName,
     required this.blocks,
     required this.gaps,
@@ -89,7 +93,17 @@ DaySummary buildDaySummary({
         state = NowState.done;
       }
     }
-    days.add(ChildDay(child: child, versionName: v?.name, blocks: blocks, gaps: gaps, focus: focus, state: state));
+    days.add(
+      ChildDay(
+        child: child,
+        versionId: v?.id,
+        versionName: v?.name,
+        blocks: blocks,
+        gaps: gaps,
+        focus: focus,
+        state: state,
+      ),
+    );
   }
   return DaySummary(weekday, days);
 }

@@ -8,6 +8,7 @@ import '../../domain/day_summary.dart';
 import '../../domain/models.dart';
 import '../../domain/timetable_logic.dart';
 import '../family/child_form_sheet.dart';
+import '../timetable/entry_detail_screen.dart';
 
 /// "오늘" 대시보드 — 앱을 열면 가장 먼저 보는 화면.
 /// 레퍼런스의 Dashboard 구성을 그대로 옮겼다:
@@ -52,26 +53,28 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               .nonNulls
               .fold<DayBlock?>(null, (best, b) => best == null || b.start < best.start ? b : best);
 
+    final header = PageHeader(
+      title: isToday ? '오늘' : '${weekdayLabel(weekday)}요일',
+      subtitle: children.isEmpty ? '아이를 추가하면 하루 일정이 여기 모여요' : _subtitle(summary),
+      asideTop: '${now.month}월 ${now.day}일',
+      asideMain: '${weekdayLabel(now.weekday)}요일',
+      // 다른 요일을 볼 때만 "오늘로". 예전엔 요일 띠 옆에 붙어 띠 폭이 줄었다 늘었다 했다(실사용 버그).
+      asideAction: isToday
+          ? null
+          : ActionChip(
+              // 머리 줄 높이 안에 들어가게 납작하게(기본 48dp 터치 여백이면 머리가 커져 아래 띠가 3px 밀렸다 —
+              // 테스트로 발견). 요일은 띠·밀기로도 바꿀 수 있어 보조 버튼으로 충분하다.
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              avatar: const Icon(Icons.undo_rounded, size: 16),
+              label: const Text('오늘로'),
+              onPressed: () => pick(now.weekday),
+            ),
+    );
+
     final page = PageBody(
       children: [
-        PageHeader(
-          title: isToday ? '오늘' : '${weekdayLabel(weekday)}요일',
-          subtitle: children.isEmpty ? '아이를 추가하면 하루 일정이 여기 모여요' : _subtitle(summary),
-          asideTop: '${now.month}월 ${now.day}일',
-          asideMain: '${weekdayLabel(now.weekday)}요일',
-          // 다른 요일을 볼 때만 "오늘로". 예전엔 요일 띠 옆에 붙어 띠 폭이 줄었다 늘었다 했다(실사용 버그).
-          asideAction: isToday
-              ? null
-              : ActionChip(
-                  // 머리 줄 높이 안에 들어가게 납작하게(기본 48dp 터치 여백이면 머리가 커져 아래 띠가 3px 밀렸다 —
-                  // 테스트로 발견). 요일은 띠·밀기로도 바꿀 수 있어 보조 버튼으로 충분하다.
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  avatar: const Icon(Icons.undo_rounded, size: 16),
-                  label: const Text('오늘로'),
-                  onPressed: () => pick(now.weekday),
-                ),
-        ),
+        if (children.isEmpty) header,
         // 아이가 없으면 안내만. (예전엔 개발용 버튼이 없는 릴리스에서 아래 KPI·빈 카드까지 같이 그려졌다)
         if (children.isEmpty) ...[
           DashCard(
@@ -85,12 +88,18 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           ),
           if (devToolsEnabled) TextButton(onPressed: () => seedSampleFamily(ref), child: const Text('개발용: 샘플 가족 채우기')),
         ] else ...[
-          KpiRow([
-            Kpi('일정', '${summary.blockCount}'),
-            Kpi(isToday ? '다음 일정' : '첫 일정', next == null ? '—' : formatMinutes(next.start)),
-            Kpi('빈 시간', '${summary.gapCount}', dot: summary.gapCount > 0 ? p.status.urgent : null),
-          ]),
-          WeekdayStrip(selected: weekday, today: now.weekday, onChanged: pick),
+          _DaySwipeZone(
+            onSwipe: (toNext) => pick(toNext ? weekday % 7 + 1 : (weekday + 5) % 7 + 1),
+            children: [
+              header,
+              KpiRow([
+                Kpi('일정', '${summary.blockCount}'),
+                Kpi(isToday ? '다음 일정' : '첫 일정', next == null ? '—' : formatMinutes(next.start)),
+                Kpi('빈 시간', '${summary.gapCount}', dot: summary.gapCount > 0 ? p.status.urgent : null),
+              ]),
+              WeekdayStrip(selected: weekday, today: now.weekday, onChanged: pick),
+            ],
+          ),
           const SizedBox(height: AppGap.lg),
           _HeroPager(days: summary.children, isToday: isToday),
           const SizedBox(height: AppGap.md),
@@ -99,33 +108,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       ],
     );
 
-    // 좌우로 밀면 요일이 넘어간다(왼쪽으로 밀면 다음 날, 일요일 다음은 월요일 — 실사용 요청).
-    // 위쪽 자녀 카드(PageView)는 자기 안에서 받은 가로 밀기를 먼저 가져가므로 자녀 넘기기와 겹치지 않는다.
-    // 세로 스크롤은 가로 드래그만 듣는 이 감지기와 다투지 않는다.
-    if (children.isEmpty) return page;
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: (_) => _dragDx = 0,
-      onHorizontalDragUpdate: (d) => _dragDx += d.delta.dx,
-      // 빠르게 튕기거나(속도) 천천히 충분히 밀거나(거리) 둘 중 하나면 넘긴다.
-      // 속도만 보면 천천히 민 손가락은 속도가 0에 가까워 넘어가지 않았다(미리보기에서 발견).
-      onHorizontalDragEnd: (d) {
-        final v = d.primaryVelocity ?? 0;
-        final left = v <= -_swipeVelocity || _dragDx <= -_swipeDistance;
-        final right = v >= _swipeVelocity || _dragDx >= _swipeDistance;
-        if (left == right) return;
-        pick(left ? weekday % 7 + 1 : (weekday + 5) % 7 + 1);
-      },
-      child: page,
-    );
+    return page;
   }
-
-  /// 이보다 느린 가로 움직임은 요일 넘기기로 보지 않는다(살짝 비스듬한 세로 스크롤을 오인하지 않게).
-  static const _swipeVelocity = 300.0;
-  static const _swipeDistance = 80.0;
-
-  /// 지금 가로 밀기에서 손가락이 움직인 거리(+ 오른쪽).
-  double _dragDx = 0;
 
   String _subtitle(DaySummary s) {
     if (s.blockCount == 0) return '이날은 일정이 없어요';
@@ -218,6 +202,7 @@ class _HeroContent extends StatelessWidget {
     };
     return HeroCard(
       gradient: tone.gradient,
+      onTap: focus == null ? null : () => openDayBlock(context, day.versionId, focus),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -272,7 +257,8 @@ class _ChildDayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final rows = <({int start, Widget widget})>[
-      for (final b in day.blocks) (start: b.start, widget: _BlockRow(block: b, tone: p.kind(b.first.kind))),
+      for (final b in day.blocks)
+        (start: b.start, widget: _BlockRow(block: b, versionId: day.versionId, tone: p.kind(b.first.kind))),
       for (final g in day.gaps) (start: g.start, widget: _GapRow(gap: g)),
     ]..sort((a, b) => a.start.compareTo(b.start));
 
@@ -292,53 +278,70 @@ class _ChildDayCard extends StatelessWidget {
   }
 }
 
-class _BlockRow extends StatelessWidget {
+/// 하루 타임라인 한 줄. 누르면 그 일정의 상세·댓글로(학교는 교시를 골라서). 댓글이 있으면 💬 개수.
+class _BlockRow extends ConsumerWidget {
   final DayBlock block;
+  final String? versionId;
   final ChildTone tone;
-  const _BlockRow({required this.block, required this.tone});
+  const _BlockRow({required this.block, required this.versionId, required this.tone});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
+    final counts = ref.watch(commentCountsProvider);
+    final comments = block.entries.fold(0, (n, e) => n + (counts[e.id] ?? 0));
     final e = block.first;
     final title = block.isSchoolBlock ? '학교 ${block.entries.length}교시' : e.title;
     final detail = block.isSchoolBlock ? block.entries.map((x) => x.title).join(' · ') : e.place;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 52,
-            child: TimeText(formatMinutes(block.start), size: AppText.body, color: p.textMuted),
-          ),
-          Container(
-            width: 3,
-            height: 36,
-            margin: const EdgeInsets.only(right: AppGap.cozy),
-            decoration: BoxDecoration(color: tone.accent, borderRadius: BorderRadius.circular(AppRadius.pill)),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${e.kind.emoji} $title',
-                  style: const TextStyle(fontSize: AppText.bodyLg, fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  [
-                    '${formatMinutes(block.start)}–${formatMinutes(block.end)}',
-                    if (detail.isNotEmpty) detail,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      onTap: versionId == null ? null : () => openDayBlock(context, versionId, block),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 52,
+              child: TimeText(formatMinutes(block.start), size: AppText.body, color: p.textMuted),
+            ),
+            Container(
+              width: 3,
+              height: 36,
+              margin: const EdgeInsets.only(right: AppGap.cozy),
+              decoration: BoxDecoration(color: tone.accent, borderRadius: BorderRadius.circular(AppRadius.pill)),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${e.kind.emoji} $title',
+                    style: const TextStyle(fontSize: AppText.bodyLg, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    [
+                      '${formatMinutes(block.start)}–${formatMinutes(block.end)}',
+                      if (detail.isNotEmpty) detail,
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: AppText.label, color: p.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            if (comments > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: AppGap.sm, top: 2),
+                child: Text(
+                  '💬 $comments',
                   style: TextStyle(fontSize: AppText.label, color: p.textMuted),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            if (versionId != null) Icon(Icons.chevron_right_rounded, color: p.textMuted),
+          ],
+        ),
       ),
     );
   }
@@ -369,4 +372,83 @@ class _GapRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 오늘 화면 위쪽(제목·숫자·요일 띠)에서만 좌우로 밀면 요일이 넘어간다. 왼쪽 = 다음 날, 일요일 다음은 월요일.
+///
+/// 화면 전체를 요일 밀기로 쓰면 탭 넘기기(오늘 ↔ 시간표 ↔ 가족)와 겹쳐서, 요일은 이 영역에서만 받는다
+/// (실사용 요청). 그 밖에서 민 건 앱 틀의 탭 넘기기로 간다. 안쪽 감지기가 먼저 이기므로 여기서 민 건 탭이
+/// 넘어가지 않는다.
+class _DaySwipeZone extends StatefulWidget {
+  final List<Widget> children;
+
+  /// true = 다음 날(왼쪽으로 밀기), false = 전날.
+  final ValueChanged<bool> onSwipe;
+
+  const _DaySwipeZone({required this.children, required this.onSwipe});
+
+  @override
+  State<_DaySwipeZone> createState() => _DaySwipeZoneState();
+}
+
+class _DaySwipeZoneState extends State<_DaySwipeZone> {
+  /// 빠르게 튕기거나(속도) 천천히 충분히 밀거나(거리) 둘 중 하나면 넘긴다. 속도만 보면 천천히 민 손가락이
+  /// 넘어가지 않았다(미리보기에서 발견).
+  static const _swipeVelocity = 300.0;
+  static const _swipeDistance = 80.0;
+  double _dragDx = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onHorizontalDragStart: (_) => _dragDx = 0,
+    onHorizontalDragUpdate: (d) => _dragDx += d.delta.dx,
+    onHorizontalDragEnd: (d) {
+      final v = d.primaryVelocity ?? 0;
+      final left = v <= -_swipeVelocity || _dragDx <= -_swipeDistance;
+      final right = v >= _swipeVelocity || _dragDx >= _swipeDistance;
+      if (left != right) widget.onSwipe(left);
+    },
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.children),
+  );
+}
+
+/// 오늘 화면에서 일정을 눌렀을 때: 일정 하나면 바로 상세(댓글), 학교 덩어리면 교시를 골라서.
+Future<void> openDayBlock(BuildContext context, String? versionId, DayBlock block) async {
+  if (versionId == null) return;
+  void open(Entry e) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => EntryDetailScreen(versionId: versionId, entryId: e.id),
+    ),
+  );
+  if (!block.isSchoolBlock) return open(block.first);
+  final picked = await showModalBottomSheet<Entry>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(AppGap.page, 0, AppGap.page, AppGap.sm),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '어느 교시요?',
+                style: TextStyle(fontSize: AppText.heading, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          for (final e in block.entries)
+            ListTile(
+              leading: Text('${e.period}교시', style: const TextStyle(fontWeight: FontWeight.w700)),
+              title: Text(e.title),
+              subtitle: Text(e.timeText),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.pop(ctx, e),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (picked != null && context.mounted) open(picked);
 }

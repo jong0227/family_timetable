@@ -54,6 +54,16 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   int _index = 0;
 
+  /// 탭 화면을 좌우로 밀어 오늘 ↔ 시간표 ↔ 가족으로 넘긴다(실사용 요청). 예전엔 IndexedStack이라 밀기가 없었다.
+  /// 화면 안에 자기 가로 밀기가 있는 곳(오늘 위쪽 요일 영역, 아이 카드)은 그쪽이 먼저 받는다 — Flutter는 같은
+  /// 종류 제스처가 겹치면 안쪽 것을 먼저 이기게 한다.
+  final _pages = PageController();
+
+  void _goTo(int i) {
+    setState(() => _index = i);
+    _pages.animateToPage(i, duration: AppMotion.normal, curve: AppMotion.curve);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +82,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _pages.dispose();
     super.dispose();
   }
 
@@ -119,7 +130,12 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
             ),
           ),
         Expanded(
-          child: IndexedStack(index: _index, children: [for (final t in _tabs) t.$2]),
+          child: PageView(
+            controller: _pages,
+            onPageChanged: (i) => setState(() => _index = i),
+            // 옆으로 넘긴 탭도 상태(스크롤 위치, 고른 요일·아이)를 잃지 않게 살려 둔다.
+            children: [for (final t in _tabs) _KeepAlive(child: t.$2)],
+          ),
         ),
       ],
     );
@@ -132,7 +148,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
               backgroundColor: p.canvas,
               selectedIndex: _index,
               labelType: NavigationRailLabelType.all,
-              onDestinationSelected: (i) => setState(() => _index = i),
+              onDestinationSelected: _goTo,
               destinations: [
                 for (final t in _tabs) NavigationRailDestination(icon: Icon(t.$1.icon), label: Text(t.$1.label)),
               ],
@@ -145,11 +161,27 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     return Scaffold(
       extendBody: true,
       body: body,
-      bottomNavigationBar: FloatingDock(
-        items: [for (final t in _tabs) t.$1],
-        index: _index,
-        onChanged: (i) => setState(() => _index = i),
-      ),
+      bottomNavigationBar: FloatingDock(items: [for (final t in _tabs) t.$1], index: _index, onChanged: _goTo),
     );
+  }
+}
+
+/// PageView에서 화면 밖으로 넘어간 탭을 버리지 않고 살려 둔다.
+class _KeepAlive extends StatefulWidget {
+  final Widget child;
+  const _KeepAlive({required this.child});
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

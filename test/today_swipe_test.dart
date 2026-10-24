@@ -12,7 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 오늘 화면을 좌우로 밀면 요일이 넘어간다(실사용 요청). 빠르게 튕기든 천천히 밀든 넘어가야 한다.
+/// 오늘 화면 위쪽(제목·숫자·요일 띠)을 좌우로 밀면 요일이 넘어간다(실사용 요청). 빠르게 튕기든 천천히 밀든.
+/// 그 아래(카드)에서 민 건 요일이 아니라 앱 틀의 탭 넘기기로 간다.
 void main() {
   setUpAll(() => AppFonts.useGoogleFonts = false);
 
@@ -50,14 +51,14 @@ void main() {
     expect(find.text('오늘'), findsOneWidget);
 
     // 천천히 충분히 민 경우(거리로 판단)
-    await tester.timedDrag(find.byType(TodayScreen), const Offset(-200, 0), const Duration(seconds: 1));
+    await tester.timedDrag(find.byType(WeekdayStrip), const Offset(-200, 0), const Duration(seconds: 1));
     await tester.pump();
     expect(find.text(dayTitle(next(today))), findsOneWidget);
 
     // 빠르게 튕긴 경우(속도로 판단), 두 번 → 어제
-    await tester.fling(find.byType(TodayScreen), const Offset(150, 0), 1000);
+    await tester.fling(find.byType(WeekdayStrip), const Offset(150, 0), 1000);
     await tester.pump();
-    await tester.fling(find.byType(TodayScreen), const Offset(150, 0), 1000);
+    await tester.fling(find.byType(WeekdayStrip), const Offset(150, 0), 1000);
     await tester.pump();
     expect(find.text(dayTitle(prev(today))), findsOneWidget);
   });
@@ -80,7 +81,7 @@ void main() {
 
     // 한 바퀴(7번) 밀면 다시 오늘
     for (var i = 0; i < 6; i++) {
-      await tester.fling(find.byType(TodayScreen), const Offset(-150, 0), 1000);
+      await tester.fling(find.byType(WeekdayStrip), const Offset(-150, 0), 1000);
       await tester.pump();
     }
     expect(find.text('오늘'), findsOneWidget);
@@ -88,8 +89,23 @@ void main() {
 
   testWidgets('조금만 움직인 건 넘기지 않는다', (tester) async {
     await pumpToday(tester);
-    await tester.timedDrag(find.byType(TodayScreen), const Offset(-30, 0), const Duration(seconds: 1));
+    await tester.timedDrag(find.byType(WeekdayStrip), const Offset(-30, 0), const Duration(seconds: 1));
     await tester.pump();
     expect(find.text('오늘'), findsOneWidget);
+  });
+
+  testWidgets('카드 쪽(위쪽 영역 밖)에서 민 건 요일을 넘기지 않는다(탭 넘기기 몫)', (tester) async {
+    await pumpToday(tester);
+    final below = tester.getRect(find.byType(WeekdayStrip)).bottomCenter + const Offset(0, 160);
+    await tester.timedDragFrom(below, const Offset(-200, 0), const Duration(milliseconds: 600));
+    await tester.pump();
+    expect(find.text('오늘'), findsOneWidget);
+  });
+
+  testWidgets('제목 쪽에서 밀어도 요일이 넘어간다', (tester) async {
+    await pumpToday(tester);
+    await tester.timedDrag(find.text('오늘'), const Offset(-200, 0), const Duration(milliseconds: 600));
+    await tester.pump();
+    expect(find.text(dayTitle(next(DateTime.now().weekday))), findsOneWidget);
   });
 }
