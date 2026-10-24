@@ -35,8 +35,9 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
     final canEdit = ref.watch(permissionsProvider).canEditEntries(widget.child);
     final mode = ref.watch(weekViewModeProvider);
     final v = widget.version;
-    final hasWeekend = v.entries.any((e) => e.weekday >= 6);
-    final showWeekend = _showWeekendOverride ?? hasWeekend;
+    // 기본: 평일엔 월~금, 토·일엔 주말까지(실사용 요청). "주말 보기/숨기기"로 바꾼 건 이 화면에서 유지.
+    final isWeekendToday = ref.watch(todayProvider).weekday >= 6;
+    final showWeekend = _showWeekendOverride ?? isWeekendToday;
     final weekdays = showWeekend ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5];
     // 칸을 누르면 누구든(보기만 하는 가족·아이도) 상세 + 댓글로. 고치는 건 상세의 "편집"에서만.
     void onTapEntry(Entry e) => Navigator.of(context).push(

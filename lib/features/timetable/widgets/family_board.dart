@@ -38,8 +38,9 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
         entries.add(e);
       }
     }
-    final hasWeekend = entries.any((e) => e.weekday >= 6);
-    final showWeekend = _showWeekendOverride ?? hasWeekend;
+    // 기본: 평일엔 월~금, 토·일엔 주말까지(실사용 요청). "주말 보기/숨기기"로 바꾼 건 이 화면에서 유지.
+    final isWeekendToday = ref.watch(todayProvider).weekday >= 6;
+    final showWeekend = _showWeekendOverride ?? isWeekendToday;
     final weekdays = showWeekend ? const [1, 2, 3, 4, 5, 6, 7] : const [1, 2, 3, 4, 5];
     final foldSchool = ref.watch(foldSchoolProvider);
     final zoom = ref.watch(timeScaleZoomProvider);
