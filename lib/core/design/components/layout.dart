@@ -43,7 +43,7 @@ class PageHeader extends StatelessWidget {
   /// 오른쪽 큰 글씨(예: "목요일")
   final String? asideMain;
 
-  /// 주면 [asideMain] 자리에 대신 놓는다(예: 다른 요일을 볼 때 "오늘로"). 제목 칸보다 낮아서 줄 높이가 안 바뀐다.
+  /// 주면 [asideMain] 자리에 대신 놓는다(예: 다른 요일을 볼 때 "오늘로", 시간표 탭의 학기 이름). [asideMain] 없이 써도 된다.
   final Widget? asideAction;
   final List<Widget> actions;
 
@@ -84,7 +84,7 @@ class PageHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (asideMain != null)
+          if (asideMain != null || asideAction != null)
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

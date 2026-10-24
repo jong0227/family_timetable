@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/session.dart';
 import '../../core/design/design.dart';
 import '../../domain/models.dart';
+import '../update/release_notes_screen.dart';
 import '../update/update_sheet.dart';
 import 'child_form_sheet.dart';
 
@@ -105,6 +106,8 @@ class _AppInfoCard extends ConsumerWidget {
     return DashCard(
       icon: Icons.system_update_alt_rounded,
       title: '앱 정보',
+      linkLabel: '업데이트 기록',
+      onLink: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ReleaseNotesScreen())),
       child: Row(
         children: [
           Expanded(

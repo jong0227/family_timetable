@@ -142,6 +142,9 @@ final availableUpdateProvider = FutureProvider<AvailableUpdate?>((ref) async {
   return UpdateService().check(current);
 });
 
+/// 업데이트 기록(패치노트). 가족 탭 > 앱 정보 > "업데이트 기록"에서 본다. 못 읽으면 null.
+final releaseNotesProvider = FutureProvider<List<ReleaseNote>?>((_) => UpdateService().history());
+
 /// 오늘 날짜. 앱을 켜 둔 채 날짜가 바뀌어도 방학 자동 적용이 따라가도록, 화면이 다시 앞으로
 /// 나올 때(AppShell의 resumed) 새로 고친다.
 final todayProvider = StateProvider<DateTime>((_) => DateTime.now());

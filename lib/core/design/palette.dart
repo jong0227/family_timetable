@@ -180,21 +180,25 @@ class AppPalette extends ThemeExtension<AppPalette> {
       infoText: Color(0xFF4CC0DF),
       positiveText: Color(0xFF2BD99C),
     ),
+    // 다크모드 일정 칸이 칙칙하다는 실사용 피드백(디자인 점검): 예전 칸 색(262A33·2C2440 등)은 채도가 낮고
+    // 카드 202024와 1.1~1.2:1이라 색이 아니라 "조금 밝은 회색"으로 보였다. 칸은 OKLCH 밝기 0.42 근처
+    // (노랑·복숭아는 0.44~0.45)·채도 0.07~0.085로 올려 카드와 1.8~2.2:1, 글자는 같은 색조 0.95로
+    // 칸 대비 6.4~7.5:1(시각 글자 0.8 투명도도 4.8:1 이상). 함께 보기는 자녀색으로 칸을 칠하므로 자녀색도 같은 기준.
     childTones: [
-      ChildTone(Color(0xFF3A1D29), Color(0xFFF6C4D5), Color(0xFFEE8BAB), [Color(0xFF4A2032), Color(0xFF3A2445)]),
-      ChildTone(Color(0xFF353016), Color(0xFFF1E2A8), Color(0xFFE6C55A), [Color(0xFF423A18), Color(0xFF2E3A1E)]),
-      ChildTone(Color(0xFF1E2A3B), Color(0xFFC4DAF6), Color(0xFF7DB2EC), [Color(0xFF223450), Color(0xFF1D3A38)]),
-      ChildTone(Color(0xFF3A2519), Color(0xFFF8D2BF), Color(0xFFF5A07A), [Color(0xFF4A2C1E), Color(0xFF3D3020)]),
-      ChildTone(Color(0xFF1A3328), Color(0xFFBCE8D3), Color(0xFF5FCB9C), [Color(0xFF1C3D2E), Color(0xFF1E3340)]),
-      ChildTone(Color(0xFF2B2340), Color(0xFFDCCDF7), Color(0xFFB59BEB), [Color(0xFF332850), Color(0xFF3B2640)]),
+      ChildTone(Color(0xFF71384D), Color(0xFFFFE7EE), Color(0xFFF38CB1), [Color(0xFF603142), Color(0xFF452E4A)]),
+      ChildTone(Color(0xFF645418), Color(0xFFF5EFD8), Color(0xFFCCAF42), [Color(0xFF4F410D), Color(0xFF313D1C)]),
+      ChildTone(Color(0xFF1D5178), Color(0xFFDFF1FF), Color(0xFF72B8F2), [Color(0xFF1E4665), Color(0xFF064043)]),
+      ChildTone(Color(0xFF784227), Color(0xFFFFE9DE), Color(0xFFF0986E), [Color(0xFF613520), Color(0xFF493314)]),
+      ChildTone(Color(0xFF1E5A40), Color(0xFFDEF5E8), Color(0xFF60C99A), [Color(0xFF174E37), Color(0xFF0D3E4C)]),
+      ChildTone(Color(0xFF534275), Color(0xFFF0EBFF), Color(0xFFBAA0F3), [Color(0xFF473A63), Color(0xFF4B2C41)]),
     ],
     kindTones: {
-      EntryKind.school: ChildTone(Color(0xFF262A33), Color(0xFFC9D0E0), Color(0xFF8E9AB8), []),
-      EntryKind.afterSchool: ChildTone(Color(0xFF2C2440), Color(0xFFDCCDF7), Color(0xFFB59BEB), []),
-      EntryKind.academy: ChildTone(Color(0xFF1E2A3B), Color(0xFFC4DAF6), Color(0xFF7DB2EC), []),
-      EntryKind.activity: ChildTone(Color(0xFF1A3328), Color(0xFFBCE8D3), Color(0xFF5FCB9C), []),
-      EntryKind.care: ChildTone(Color(0xFF3A2519), Color(0xFFF8D2BF), Color(0xFFF5A07A), []),
-      EntryKind.etc: ChildTone(Color(0xFF2A2A2F), Color(0xFFD0D0D6), Color(0xFF8E8E94), []),
+      EntryKind.school: ChildTone(Color(0xFF434D61), Color(0xFFE4EFFF), Color(0xFF9CB2D8), []),
+      EntryKind.afterSchool: ChildTone(Color(0xFF534275), Color(0xFFF0EBFF), Color(0xFFBAA0F3), []),
+      EntryKind.academy: ChildTone(Color(0xFF195277), Color(0xFFDEF2FF), Color(0xFF6EB9F1), []),
+      EntryKind.activity: ChildTone(Color(0xFF23593D), Color(0xFFDFF5E7), Color(0xFF68C894), []),
+      EntryKind.care: ChildTone(Color(0xFF784227), Color(0xFFFFE9DE), Color(0xFFF0986E), []),
+      EntryKind.etc: ChildTone(Color(0xFF4C4D50), Color(0xFFEDEEF3), Color(0xFFAEB1B8), []),
     },
     canvas: Color(0xFF111113),
     // 바탕 111113과 카드 1C1C1F가 1.11:1로 카드 경계가 안 보였다 → 조금 밝게.

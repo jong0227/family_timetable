@@ -31,6 +31,11 @@ class TimeScaleGrid extends StatelessWidget {
   /// 접힌 "학교" 칸을 눌렀을 때(펼치기).
   final VoidCallback? onToggleSchool;
 
+  /// 여러 아이를 한 격자에(함께 보기): 일정이 누구 것인지([groupOf] — 학교 칸을 아이마다 따로 접는다)와
+  /// 칸 색([toneOf] — 자녀색). 없으면 한 아이 시간표이고 칸 색은 종류색.
+  final Object Function(Entry e)? groupOf;
+  final ChildTone Function(Entry e)? toneOf;
+
   const TimeScaleGrid({
     super.key,
     required this.entries,
@@ -41,6 +46,8 @@ class TimeScaleGrid extends StatelessWidget {
     this.foldSchool = false,
     this.zoom = 1,
     this.onToggleSchool,
+    this.groupOf,
+    this.toneOf,
   });
 
   // 1.1에서 올림: 40분 칸에 시작 시각 + 이름 두 줄이 들어가야 읽힌다(실기기 피드백).
@@ -61,7 +68,39 @@ class TimeScaleGrid extends StatelessWidget {
     final p = context.palette;
     final now = DateTime.now();
     final shown = entries.where((e) => weekdays.contains(e.weekday)).toList();
-    if (shown.isEmpty) return const SizedBox.shrink();
+    // 보이는 요일에 일정이 없어도(예: 일정이 주말에만 있는데 주말을 끈 경우) 요일 머리는 그린다.
+    // 예전엔 격자 전체가 사라져 요일조차 안 보였다(실사용 버그). 요일을 눌러 일정을 넣을 수도 있어야 한다.
+    if (shown.isEmpty) {
+      final dense = weekdays.length >= 7;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(width: dense ? _gutterNarrow : _gutterWide),
+              for (var i = 0; i < weekdays.length; i++) ...[
+                if (i > 0) SizedBox(width: dense ? AppGap.xxs : AppGap.xs),
+                Expanded(
+                  child: WeekdayHeader(
+                    weekday: weekdays[i],
+                    isToday: weekdays[i] == now.weekday,
+                    onTap: onTapDay == null ? null : () => onTapDay!(weekdays[i]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppGap.xxl),
+            child: Text(
+              '이 요일들엔 일정이 없어요',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: AppText.body, color: p.textMuted),
+            ),
+          ),
+        ],
+      );
+    }
 
     final first = shown.map((e) => e.start).reduce((a, b) => a < b ? a : b);
     final last = shown.map((e) => e.end).reduce((a, b) => a > b ? a : b);
@@ -77,26 +116,35 @@ class TimeScaleGrid extends StatelessWidget {
     final nowMinutes = now.hour * 60 + now.minute;
 
     // 접을 땐 요일마다 교시들을 "학교" 칸 하나로 합친다(몇 교시까지인지는 칸 안에 적는다).
-    final periodsByDay = <int, List<Entry>>{};
+    // 함께 보기면 아이마다 따로 합친다(두 아이 교시가 한 칸으로 섞이지 않게).
+    final periodsByDay = <int, Map<Object, List<Entry>>>{};
     if (foldSchool) {
       for (final e in shown.where(_isPeriod)) {
-        periodsByDay.putIfAbsent(e.weekday, () => []).add(e);
+        periodsByDay.putIfAbsent(e.weekday, () => {}).putIfAbsent(groupOf?.call(e) ?? '', () => []).add(e);
       }
     }
+    // 합친 "학교" 칸 id → 그 안의 교시들
+    final summaries = <String, List<Entry>>{};
     List<Entry> dayEntries(int d) {
       final day = shown.where((e) => e.weekday == d).toList();
-      final periods = periodsByDay[d];
-      if (periods == null) return day;
+      final groups = periodsByDay[d];
+      if (groups == null) return day;
+      var n = 0;
       return [
         ...day.where((e) => !_isPeriod(e)),
-        Entry(
-          id: '$_schoolPrefix$d',
-          weekday: d,
-          start: periods.map((e) => e.start).reduce((a, b) => a < b ? a : b),
-          end: periods.map((e) => e.end).reduce((a, b) => a > b ? a : b),
-          title: '학교',
-          kind: EntryKind.school,
-        ),
+        for (final periods in groups.values)
+          () {
+            final id = '$_schoolPrefix${d}_${n++}';
+            summaries[id] = periods;
+            return Entry(
+              id: id,
+              weekday: d,
+              start: periods.map((e) => e.start).reduce((a, b) => a < b ? a : b),
+              end: periods.map((e) => e.end).reduce((a, b) => a > b ? a : b),
+              title: '학교',
+              kind: EntryKind.school,
+            );
+          }(),
       ];
     }
 
@@ -193,7 +241,8 @@ class TimeScaleGrid extends StatelessWidget {
                                 width: w - (slot.lanes > 1 ? 1 : 0),
                                 child: _Block(
                                   entry: e,
-                                  schoolPeriods: summary ? periodsByDay[e.weekday]!.length : null,
+                                  schoolPeriods: summary ? summaries[e.id]!.length : null,
+                                  tone: toneOf?.call(summary ? summaries[e.id]!.first : e),
                                   commentCount: commentCounts[e.id] ?? 0,
                                   onTap: summary ? onToggleSchool : (onTapEntry == null ? null : () => onTapEntry!(e)),
                                 ),
@@ -233,7 +282,10 @@ class _Block extends StatelessWidget {
   final int commentCount;
   final VoidCallback? onTap;
 
-  const _Block({required this.entry, this.schoolPeriods, required this.commentCount, this.onTap});
+  /// 칸 색. 없으면 종류색(함께 보기에선 자녀색을 준다).
+  final ChildTone? tone;
+
+  const _Block({required this.entry, this.schoolPeriods, required this.commentCount, this.onTap, this.tone});
 
   static const _titleSize = AppText.caption;
   static const _titleLineHeight = _titleSize * 1.25;
@@ -241,7 +293,7 @@ class _Block extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final tone = p.kind(entry.kind);
+    final tone = this.tone ?? p.kind(entry.kind);
     final summary = schoolPeriods != null;
     final label = summary
         ? '~${formatMinutes(entry.end)}'

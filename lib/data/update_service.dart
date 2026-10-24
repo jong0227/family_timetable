@@ -16,18 +16,28 @@ class UpdateService {
   /// 설치된 [current]보다 새 버전이 있으면 그것, 없거나 확인 못 하면 null.
   /// 네트워크가 안 돼도 앱 사용에 지장이 없어야 하므로 예외를 밖으로 던지지 않는다.
   Future<AvailableUpdate?> check(AppVersion current) async {
+    final list = await _releases();
+    final newest = list == null ? null : newestRelease(list);
+    return newest != null && newest.version.isNewerThan(current) ? newest : null;
+  }
+
+  /// 업데이트 기록(패치노트), 새 버전부터. 확인 못 하면 null.
+  Future<List<ReleaseNote>?> history() async {
+    final list = await _releases();
+    return list == null ? null : releaseHistory(list);
+  }
+
+  Future<List<dynamic>?> _releases() async {
     try {
       final res = await _client
           .get(
-            Uri.parse('https://api.github.com/repos/$repo/releases?per_page=20'),
+            Uri.parse('https://api.github.com/repos/$repo/releases?per_page=50'),
             headers: const {'Accept': 'application/vnd.github+json'},
           )
           .timeout(const Duration(seconds: 10));
       if (res.statusCode != 200) return null;
       final list = jsonDecode(utf8.decode(res.bodyBytes));
-      if (list is! List) return null;
-      final newest = newestRelease(list);
-      return newest != null && newest.version.isNewerThan(current) ? newest : null;
+      return list is List ? list : null;
     } catch (_) {
       return null;
     }

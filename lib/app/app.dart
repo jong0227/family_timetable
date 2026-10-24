@@ -3,10 +3,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/design/design.dart';
+import '../domain/app_version.dart';
 import '../features/family/family_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/timetable/timetable_screen.dart';
 import '../features/today/today_screen.dart';
+import '../features/update/release_notes_screen.dart';
 import '../features/update/update_sheet.dart';
 import 'bootstrap.dart';
 import 'providers.dart';
@@ -76,7 +78,34 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       if (recovered != null && mounted) {
         showToast(context, '이 폰에 저장된 파일이 손상돼 따로 보관하고 새로 시작했어요');
       }
+      _showWhatsNew();
     });
+  }
+
+  static const _lastSeenVersionKey = 'lastSeenAppVersion';
+
+  /// 업데이트하고 처음 켰을 때 한 번, 그 사이 바뀐 점(패치노트)을 띄운다. 처음 설치면 띄우지 않는다.
+  /// 노트를 못 읽으면(인터넷 없음) 다음에 켤 때 다시 시도한다.
+  Future<void> _showWhatsNew() async {
+    try {
+      final prefs = ref.read(bootstrapProvider).prefs;
+      final current = await ref.read(appVersionProvider.future);
+      final seen = AppVersion.tryParse(prefs.getString(_lastSeenVersionKey) ?? '');
+      if (seen == null || !current.isNewerThan(seen)) {
+        if (seen != current) await prefs.setString(_lastSeenVersionKey, '$current');
+        return;
+      }
+      final notes = await ref.read(releaseNotesProvider.future);
+      if (notes == null) return;
+      final between = [
+        for (final n in notes)
+          if (n.version.isNewerThan(seen) && !n.version.isNewerThan(current)) n,
+      ];
+      await prefs.setString(_lastSeenVersionKey, '$current');
+      if (between.isNotEmpty && mounted) await showWhatsNewSheet(context, notes: between, current: current);
+    } catch (_) {
+      // 버전 정보를 못 읽는 환경(테스트 등)에선 조용히 넘어간다.
+    }
   }
 
   @override

@@ -79,8 +79,8 @@ String plainNotes(String markdown) {
   for (final raw in markdown.split(RegExp(r'\r?\n'))) {
     final line = raw.trim();
     if (line.startsWith('#')) {
-      // "폰에 설치하기"는 앱 안 업데이트에선 필요 없는 안내라 뺀다.
-      skip = line.contains('설치하기');
+      // "폰에 설치하기"·"설치"는 앱 안에선 필요 없는 안내라 뺀다.
+      skip = line.contains('설치');
       final title = line.replaceAll(RegExp(r'^#+\s*'), '');
       if (!skip && !title.startsWith('가족 시간표')) lines.add(title);
       continue;
@@ -89,4 +89,27 @@ String plainNotes(String markdown) {
     lines.add(line.replaceAll('**', '').replaceAll('`', ''));
   }
   return lines.join('\n').trim();
+}
+
+/// 업데이트 기록(패치노트) 한 건.
+class ReleaseNote {
+  final AppVersion version;
+  final DateTime? date;
+  final String notes;
+  const ReleaseNote({required this.version, required this.date, required this.notes});
+}
+
+/// 릴리스 목록(GitHub API JSON) → 새 버전부터 차례로. 초안·버전 태그가 아닌 건 뺀다.
+List<ReleaseNote> releaseHistory(List<dynamic> releases) {
+  final notes = <ReleaseNote>[
+    for (final r in releases)
+      if (r is Map && r['draft'] != true)
+        if (AppVersion.tryParse('${r['tag_name'] ?? ''}') case final v?)
+          ReleaseNote(
+            version: v,
+            date: DateTime.tryParse('${r['published_at'] ?? ''}')?.toLocal(),
+            notes: plainNotes('${r['body'] ?? ''}'),
+          ),
+  ];
+  return notes..sort((a, b) => a.version.isNewerThan(b.version) ? -1 : (b.version.isNewerThan(a.version) ? 1 : 0));
 }
