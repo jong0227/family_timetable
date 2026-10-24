@@ -166,27 +166,41 @@ class _SharingCard extends ConsumerWidget {
         : null;
 
     if (code != null) {
+      // 한 줄로: 예전엔 제목 줄 + 큰 숫자 코드 + "다른 가족 코드로 참여" 줄까지 카드 하나가 너무 컸다(실사용 피드백).
+      // 다른 가족으로 옮기기는 드물게 쓰니 ⋮ 메뉴 안으로.
       return DashCard(
-        icon: Icons.sync_rounded,
-        title: '가족 공유 중',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.fromLTRB(AppGap.lg, AppGap.xs, AppGap.xs, AppGap.xs),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TimeText(code, size: AppText.kpi, weight: FontWeight.w300),
-                ),
-                OutlinedButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: code));
-                    showToast(context, '가족 코드를 복사했어요. 가족에게 보내 주세요');
-                  },
-                  child: const Text('코드 복사'),
-                ),
-              ],
+            Icon(Icons.sync_rounded, size: 18, color: p.status.positive),
+            const SizedBox(width: AppGap.sm),
+            Text(
+              '가족 코드',
+              style: TextStyle(fontSize: AppText.label, color: p.textMuted),
             ),
-            ?joinOther,
+            const SizedBox(width: AppGap.sm),
+            Expanded(
+              child: TimeText(code, size: AppText.titleLg, weight: FontWeight.w700),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code));
+                showToast(context, '가족 코드를 복사했어요. 가족에게 보내 주세요');
+              },
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('복사'),
+            ),
+            if (firebaseReady)
+              PopupMenuButton<void>(
+                tooltip: '더 보기',
+                icon: const Icon(Icons.more_vert_rounded, size: 20),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    onTap: () => _joinOtherFamily(context, ref, currentCode: code),
+                    child: const Text('다른 가족 코드로 참여'),
+                  ),
+                ],
+              ),
           ],
         ),
       );

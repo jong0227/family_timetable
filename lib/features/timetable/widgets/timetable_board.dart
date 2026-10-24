@@ -49,76 +49,87 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
         ? (d) => showEntryEditor(context, child: widget.child, version: v, weekday: d)
         : null;
 
+    final isTimeScale = mode == WeekViewMode.timeScale;
+    final canPeriods = canEdit && widget.child.institution.hasPeriods && !v.isVacation;
+    // 작은 단추 모양 하나로 통일(예전엔 큰 버튼 두 개 + 카드 제목 줄 + 보기 줄로 격자가 화면 아래로 밀렸다 — 실사용 피드백).
+    const compact = ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(0, 38)),
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+      textStyle: WidgetStatePropertyAll(TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700)),
+      visualDensity: VisualDensity.compact,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (canEdit) ...[
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => showEntryEditor(context, child: widget.child, version: v),
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                  label: const Text('일정 추가'),
+        // 1줄: 보기 방식 + (고칠 수 있으면) 교시 입력 · 일정 추가
+        Row(
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: PillTabs<WeekViewMode>(
+                  items: [for (final m in WeekViewMode.values) (m, m.label, null)],
+                  selected: mode,
+                  onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
                 ),
               ),
-              if (widget.child.institution.hasPeriods && !v.isVacation) ...[
-                const SizedBox(width: AppGap.sm),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => showSchoolWeekSheet(context, child: widget.child, version: v),
-                    icon: const Icon(Icons.grid_view_rounded, size: 18),
-                    label: const Text('교시 입력'),
-                  ),
-                ),
-              ],
+            ),
+            const SizedBox(width: AppGap.sm),
+            if (canPeriods) ...[
+              OutlinedButton.icon(
+                style: compact,
+                onPressed: () => showSchoolWeekSheet(context, child: widget.child, version: v),
+                icon: const Icon(Icons.grid_view_rounded, size: 16),
+                label: const Text('교시'),
+              ),
+              const SizedBox(width: AppGap.snug),
             ],
-          ),
-          const SizedBox(height: AppGap.md),
-        ],
+            if (canEdit)
+              FilledButton.icon(
+                style: compact,
+                onPressed: () => showEntryEditor(context, child: widget.child, version: v),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('일정'),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppGap.sm),
+        // 2줄: 켜고 끄는 것들은 체크 표시가 있는 칩으로 — 켜졌는지 꺼졌는지가 보여야 한다.
+        // "학교 교시 보기"를 끄면(기본) 학교에 있는 시간이 "학교" 칸 하나로 접힌다. 예전 "학교 펼치기" 단추와
+        // 접힌 칸의 작은 화살표로는 어딜 눌러야 교시가 보이는지 몰랐다(실사용 피드백).
+        Wrap(
+          spacing: AppGap.sm,
+          runSpacing: AppGap.xs,
+          children: [
+            if (isTimeScale && hasSchoolPeriods)
+              ToggleChip(
+                label: '학교 교시 보기',
+                selected: !foldSchool,
+                onChanged: (_) => ref.read(foldSchoolProvider.notifier).toggle(),
+              ),
+            ToggleChip(
+              label: '주말',
+              selected: showWeekend,
+              onChanged: (on) => setState(() => _showWeekendOverride = on),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppGap.sm),
         DashCard(
-          icon: Icons.calendar_view_week_rounded,
-          title: '주간 시간표 · 일정 ${v.entries.length}개',
-          linkLabel: showWeekend ? '주말 숨기기' : '주말 보기',
-          onLink: () => setState(() => _showWeekendOverride = !showWeekend),
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
           child: v.entries.isEmpty
               ? EmptyState(
                   emoji: '🗓️',
                   title: '아직 일정이 없어요',
                   message: canEdit
-                      ? (widget.child.institution.hasPeriods && !v.isVacation
-                            ? '학교 시간표는 "교시 입력"으로, 학원은 "일정 추가"로 넣어 보세요.'
-                            : '"일정 추가"로 등원·하원 시간부터 넣어 보세요.')
+                      ? (canPeriods ? '학교 시간표는 "교시"로, 학원은 "일정"으로 넣어 보세요.' : '"일정"으로 등원·하원 시간부터 넣어 보세요.')
                       : null,
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        PillTabs<WeekViewMode>(
-                          items: [for (final m in WeekViewMode.values) (m, m.label, null)],
-                          selected: mode,
-                          onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
-                        ),
-                        const Spacer(),
-                        if (mode == WeekViewMode.timeScale && hasSchoolPeriods)
-                          // 글자 버튼은 눈에 잘 안 띄어서(실사용 질문) 알약 모양 버튼으로.
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 36),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              textStyle: const TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700),
-                            ),
-                            onPressed: () => ref.read(foldSchoolProvider.notifier).toggle(),
-                            icon: Icon(foldSchool ? Icons.unfold_more_rounded : Icons.unfold_less_rounded, size: 16),
-                            label: Text(foldSchool ? '학교 펼치기' : '학교 접기'),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: AppGap.md),
-                    if (mode == WeekViewMode.timeScale)
+                    if (isTimeScale)
                       // 두 손가락으로 벌리면 세로로 늘고 오므리면 줄어든다(이 폰에 기억).
                       PinchZoom(
                         zoom: zoom,

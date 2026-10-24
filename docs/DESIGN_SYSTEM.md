@@ -75,6 +75,7 @@
 | `StatusChip` / `StatusDot` | 상태색 표시 |
 | `TimeText` | 시각(Poppins) |
 | `PillTabs` | 같은 화면 안 전환(요일·자녀·학년) |
+| `ToggleChip` | 켜고 끄기(학교 교시 보기·주말). 켜짐은 검은 알약 + 체크 — 상태가 한눈에 보이게 |
 | `FloatingDock` | 하단 탭 |
 | `EmptyState` | 빈 상태 + **다음 행동 버튼** |
 | `InfoBanner` | 화면 위 상태 알림 띠 |

@@ -224,3 +224,53 @@ class PillTabs<T> extends StatelessWidget {
     );
   }
 }
+
+/// 켜고 끄는 알약 칩: 켜지면 검은 알약 + 체크, 꺼지면 바탕색 + 빈 동그라미. [PillTabs]와 같은 색 규칙.
+///
+/// 기본 FilterChip은 어두운 화면에서 켜진 칩 글자가 바탕에 묻혔다(미리보기에서 발견). 켜짐/꺼짐이 한눈에
+/// 보여야 해서("학교 교시 보기"를 어딜 눌러야 하냐는 실사용 질문) 체크 표시를 늘 붙인다.
+class ToggleChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
+
+  const ToggleChip({super.key, required this.label, required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final fg = selected ? p.onDock : p.textMuted;
+    return Semantics(
+      button: true,
+      toggled: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: () => onChanged(!selected),
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: selected ? p.dock : p.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 16, color: fg),
+              const SizedBox(width: AppGap.snug),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: AppText.label,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? p.onDock : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

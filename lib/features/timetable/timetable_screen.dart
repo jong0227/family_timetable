@@ -11,7 +11,7 @@ import 'versions_screen.dart';
 import 'widgets/timetable_board.dart';
 
 /// 시간표 탭: 자녀를 고르면 그 아이의 "지금 쓰는 시간표"를 보여주고 고친다.
-/// 학기 관리(버전)와 수정 기록은 위쪽 카드에서 들어간다.
+/// 학기 관리(버전)와 수정 기록은 위쪽 한 줄([_VersionBar])에서 들어간다.
 class TimetableScreen extends ConsumerStatefulWidget {
   const TimetableScreen({super.key});
 
@@ -45,22 +45,22 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     }
 
     final version = ref.watch(currentVersionProvider(child.id));
-    final versions = ref.watch(childVersionsProvider(child.id));
     final perms = ref.watch(permissionsProvider);
 
     return PageBody(
       children: [
-        PageHeader(title: '시간표', subtitle: '${child.name} · ${child.institutionText}'),
+        // 큰 제목("시간표" + 아이·학년)과 학기 카드가 화면 위 1/3을 차지해 정작 시간표가 아래로 밀렸다(실사용 피드백).
+        // 탭 이름은 아래 내비가 이미 말해 주므로, 위는 "누구의 · 어떤 시간표" 한 줄로 줄인다.
         if (children.length > 1) ...[
           PillTabs<String>(
             items: [for (final c in children) (c.id, c.name, p.child(c.colorIndex).accent)],
             selected: child.id,
             onChanged: (id) => setState(() => _childId = id),
           ),
-          const SizedBox(height: AppGap.lg),
+          const SizedBox(height: AppGap.xs),
         ],
-        _VersionCard(child: child, version: version, versionCount: versions.length),
-        const SizedBox(height: AppGap.md),
+        _VersionBar(child: child, version: version, showName: children.length == 1),
+        const SizedBox(height: AppGap.sm),
         if (version != null)
           TimetableBoard(child: child, version: version)
         else
@@ -78,65 +78,70 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   }
 }
 
-/// 지금 쓰는 시간표 한 줄: "2학년 2학기 · 사용 중" + 학기 관리·수정 기록 바로가기.
+/// 지금 쓰는 시간표 한 줄: "2학년 2학기 ● 사용 중 ▸" + 수정 기록 단추.
 ///
-/// 예전엔 파스텔 히어로 카드(약 180dp)였는데, 이 탭을 여는 이유인 주간 격자가 플립에서 화면 아래로 밀려났다
-/// (디자인 점검). 시간표 이름은 한 줄로 줄이고 격자를 위로 올린다. 히어로 카드는 "오늘" 화면의 몫.
-class _VersionCard extends ConsumerWidget {
+/// 줄을 누르면 학기 관리(시간표 목록). 예전엔 이름 카드 + "시간표 N개"·"수정 기록" 글자 단추 줄이 따로 있었다.
+class _VersionBar extends ConsumerWidget {
   final Child child;
   final TimetableVersion? version;
-  final int versionCount;
 
-  const _VersionCard({required this.child, required this.version, required this.versionCount});
+  /// 아이가 한 명이면 위에 아이 탭이 없으니 여기 이름을 붙인다.
+  final bool showName;
+
+  const _VersionBar({required this.child, required this.version, required this.showName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
     final today = ref.watch(todayProvider);
     final v = version;
-    final chip = v == null
+    final status = v == null
         ? null
         : v.covers(today)
-        ? StatusChip('방학 · ${formatDateShort(v.endDate!)}까지', color: p.status.positive, dot: true)
-        : StatusChip('사용 중', color: p.status.positive, dot: true);
+        ? '방학 · ${formatDateShort(v.endDate!)}까지'
+        : '사용 중';
     void open(Widget screen) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 
-    return DashCard(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ChildBadge(child),
-              const SizedBox(width: AppGap.sm),
-              Expanded(
-                child: Text(
-                  v?.name ?? '시간표 없음',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: AppText.titleLg, fontWeight: FontWeight.w700),
-                ),
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            onTap: () => open(VersionsScreen(childId: child.id)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppGap.sm, horizontal: AppGap.xs),
+              child: Row(
+                children: [
+                  if (showName) ...[ChildBadge(child, large: true), const SizedBox(width: AppGap.sm)],
+                  Flexible(
+                    child: Text(
+                      v?.name ?? '시간표 없음',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: AppText.heading, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (status != null) ...[
+                    const SizedBox(width: AppGap.sm),
+                    StatusDot(p.status.positive),
+                    const SizedBox(width: AppGap.xs),
+                    Text(
+                      status,
+                      style: TextStyle(fontSize: AppText.label, color: p.status.positiveText),
+                    ),
+                  ],
+                  Icon(Icons.chevron_right_rounded, size: 20, color: p.textMuted),
+                ],
               ),
-              ?chip,
-            ],
+            ),
           ),
-          Row(
-            children: [
-              TextButton.icon(
-                onPressed: () => open(VersionsScreen(childId: child.id)),
-                icon: const Icon(Icons.layers_outlined, size: 18),
-                label: Text('시간표 $versionCount개'),
-              ),
-              if (v != null)
-                TextButton.icon(
-                  onPressed: () => open(RevisionsScreen(versionId: v.id)),
-                  icon: const Icon(Icons.history_rounded, size: 18),
-                  label: const Text('수정 기록'),
-                ),
-            ],
+        ),
+        if (v != null)
+          IconButton(
+            tooltip: '수정 기록',
+            icon: const Icon(Icons.history_rounded),
+            onPressed: () => open(RevisionsScreen(versionId: v.id)),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

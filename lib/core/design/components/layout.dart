@@ -106,7 +106,7 @@ class PageHeader extends StatelessWidget {
   }
 }
 
-/// KPI 한 칸: 흐린 라벨 위에 크고 가는 숫자. 레퍼런스의 "Open tasks 24".
+/// KPI 한 칸: 흐린 라벨 위에 크고 가는 숫자(칸 가운데 정렬). 레퍼런스의 "Open tasks 24".
 class Kpi {
   final String label;
   final String value;
@@ -129,8 +129,9 @@ class KpiRow extends StatelessWidget {
         children: [
           for (final k in items)
             Expanded(
+              // 칸 가운데 정렬: 왼쪽 정렬이면 첫 칸만 화면 끝에 붙어 치우쳐 보였다(실사용 피드백). 아래 요일 띠의
+              // 가운데 정렬 칸과도 줄이 맞는다.
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     k.label,
@@ -138,6 +139,7 @@ class KpiRow extends StatelessWidget {
                   ),
                   const SizedBox(height: AppGap.xs),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(k.value, style: AppFonts.numeric(size: AppText.kpi)),
                       if (k.dot != null) ...[const SizedBox(width: AppGap.snug), StatusDot(k.dot!)],
