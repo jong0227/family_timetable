@@ -45,6 +45,9 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
     final foldSchool = ref.watch(foldSchoolProvider);
     final zoom = ref.watch(timeScaleZoomProvider);
     final hasSchoolPeriods = entries.any((e) => e.kind == EntryKind.school && e.period != null);
+    // 아이마다 색 계열(파랑/빨강/…): 학교는 옅게, 나머지는 진하게 + 왼쪽 띠. 종류색으로 칠하면 보라 방과후가
+    // 다른 아이처럼 보여 아이 구분이 안 됐다(실사용 피드백, 디자인 점검).
+    final families = p.familiesFor(widget.children);
 
     return DashCard(
       icon: Icons.groups_2_outlined,
@@ -64,7 +67,9 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
                       child: Wrap(
                         spacing: AppGap.md,
                         runSpacing: AppGap.xs,
-                        children: [for (final c in widget.children) ChildBadge(c)],
+                        children: [
+                          for (final c in widget.children) _FamilyLegend(child: c, color: families[c.id]!.accent),
+                        ],
                       ),
                     ),
                     if (hasSchoolPeriods)
@@ -88,7 +93,11 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
                     zoom: zoom,
                     onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
                     groupOf: (e) => owner[e.id]!.$1.id,
-                    toneOf: (e) => p.child(owner[e.id]!.$1.colorIndex),
+                    toneOf: (e) {
+                      final f = families[owner[e.id]!.$1.id]!;
+                      return e.kind == EntryKind.school ? f.soft : f.strong;
+                    },
+                    stripeOf: (e) => families[owner[e.id]!.$1.id]!.accent,
                     onTapEntry: (e) => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => EntryDetailScreen(versionId: owner[e.id]!.$2, entryId: e.id),
@@ -100,4 +109,28 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
             ),
     );
   }
+}
+
+/// 범례 한 칸: 계열색 띠 + 아이 이름. 칸 왼쪽 띠와 같은 모양이라 읽는 법이 바로 보인다.
+class _FamilyLegend extends StatelessWidget {
+  final Child child;
+  final Color color;
+  const _FamilyLegend({required this.child, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+      ),
+      const SizedBox(width: AppGap.snug),
+      Text(
+        child.name,
+        style: const TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w700),
+      ),
+    ],
+  );
 }

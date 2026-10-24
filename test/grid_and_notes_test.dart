@@ -58,4 +58,28 @@ void main() {
       expect(list.first.date, isNotNull);
     });
   });
+
+  group('함께 보기 색 계열', () {
+    Child kid(String id, int color) => Child(
+      id: id,
+      name: id,
+      institution: Institution.elementary,
+      colorIndex: color,
+      order: 0,
+      updatedAt: DateTime(2026),
+    );
+    const p = AppPalette.light;
+
+    test('라벤더 아이는 파랑, 장미 아이는 빨강', () {
+      final f = p.familiesFor([kid('a', 5), kid('b', 0)]);
+      expect(f['a'], same(p.familyTones[0]));
+      expect(f['b'], same(p.familyTones[1]));
+    });
+
+    test('같은 계열을 고른 두 아이도 서로 다른 계열로 갈린다', () {
+      final f = p.familiesFor([kid('a', 2), kid('b', 5)]); // 하늘·라벤더 = 둘 다 파랑
+      expect(f['a'], same(p.familyTones[0]));
+      expect(f['b'], same(p.familyTones[1]));
+    });
+  });
 }

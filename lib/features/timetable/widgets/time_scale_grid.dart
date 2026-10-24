@@ -36,6 +36,9 @@ class TimeScaleGrid extends StatelessWidget {
   final Object Function(Entry e)? groupOf;
   final ChildTone Function(Entry e)? toneOf;
 
+  /// 칸 왼쪽 3px 띠 색(함께 보기: 아이 계열 강조색). 좁은 칸에서도 누구 일정인지 보이게.
+  final Color Function(Entry e)? stripeOf;
+
   const TimeScaleGrid({
     super.key,
     required this.entries,
@@ -48,6 +51,7 @@ class TimeScaleGrid extends StatelessWidget {
     this.onToggleSchool,
     this.groupOf,
     this.toneOf,
+    this.stripeOf,
   });
 
   // 1.1에서 올림: 40분 칸에 시작 시각 + 이름 두 줄이 들어가야 읽힌다(실기기 피드백).
@@ -243,6 +247,7 @@ class TimeScaleGrid extends StatelessWidget {
                                   entry: e,
                                   schoolPeriods: summary ? summaries[e.id]!.length : null,
                                   tone: toneOf?.call(summary ? summaries[e.id]!.first : e),
+                                  stripe: stripeOf?.call(summary ? summaries[e.id]!.first : e),
                                   commentCount: commentCounts[e.id] ?? 0,
                                   onTap: summary ? onToggleSchool : (onTapEntry == null ? null : () => onTapEntry!(e)),
                                 ),
@@ -282,10 +287,20 @@ class _Block extends StatelessWidget {
   final int commentCount;
   final VoidCallback? onTap;
 
-  /// 칸 색. 없으면 종류색(함께 보기에선 자녀색을 준다).
+  /// 칸 색. 없으면 종류색(함께 보기에선 자녀 계열색을 준다).
   final ChildTone? tone;
 
-  const _Block({required this.entry, this.schoolPeriods, required this.commentCount, this.onTap, this.tone});
+  /// 왼쪽 띠 색(함께 보기). 없으면 띠 없음.
+  final Color? stripe;
+
+  const _Block({
+    required this.entry,
+    this.schoolPeriods,
+    required this.commentCount,
+    this.onTap,
+    this.tone,
+    this.stripe,
+  });
 
   static const _titleSize = AppText.caption;
   static const _titleLineHeight = _titleSize * 1.25;
@@ -341,8 +356,10 @@ class _Block extends StatelessWidget {
               );
               return Stack(
                 children: [
+                  if (stripe != null)
+                    Positioned(left: 0, top: 0, bottom: 0, width: 3, child: ColoredBox(color: stripe!)),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(4, h < 24 ? 1 : 3, 2, 2),
+                    padding: EdgeInsets.fromLTRB(stripe == null ? 4 : 6, h < 24 ? 1 : 3, 2, 2),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       // 접힌 학교 칸: "학교" / "13:40"(끝 = 하원 시각) 두 줄. 예전엔 "5교시 ~13:40"을 한 줄에 줄여 넣어

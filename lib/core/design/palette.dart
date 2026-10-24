@@ -73,6 +73,18 @@ class ChildTone {
   const ChildTone(this.container, this.onContainer, this.accent, this.gradient);
 }
 
+/// 함께 보기에서 아이 한 명이 쓰는 색 계열(파랑·빨강·초록·호박·보라). 학교는 옅게([soft]), 나머지는 진하게([strong]).
+/// 글자색·강조색은 두 단계가 같다. 아이 구분이 먼저, 종류 구분은 그다음(디자인 점검 2026-10-24).
+@immutable
+class FamilyTone {
+  final ChildTone soft;
+  final ChildTone strong;
+  const FamilyTone(this.soft, this.strong);
+
+  /// 칸 왼쪽 띠·범례 점
+  Color get accent => strong.accent;
+}
+
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
   final StatusColors status;
@@ -104,7 +116,30 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.textMuted,
     required this.dock,
     required this.onDock,
+    required this.familyTones,
   });
+
+  /// 함께 보기 색 계열: 파랑, 빨강, 초록, 호박, 보라 순.
+  final List<FamilyTone> familyTones;
+
+  /// 자녀색 → 계열: 장미→빨강, 레몬→호박, 하늘→파랑, 복숭아→빨강, 민트→초록, 라벤더→파랑.
+  static const _familyOfChildColor = [1, 3, 0, 1, 2, 0];
+
+  /// 함께 보기에서 아이마다 쓸 계열. 고른 자녀색에서 따오되(차갑던 아이는 차갑게), 앞 아이와 같은 계열이면
+  /// 비어 있는 계열 중 우선순위(파랑→빨강→초록→호박→보라)로 바꾼다. 두 아이가 늘 파랑/빨강처럼 갈리게.
+  Map<String, FamilyTone> familiesFor(List<Child> ordered) {
+    final taken = <int>{};
+    final out = <String, FamilyTone>{};
+    for (final c in ordered) {
+      var f = _familyOfChildColor[c.colorIndex % _familyOfChildColor.length];
+      if (taken.contains(f)) {
+        f = List.generate(familyTones.length, (i) => i).firstWhere((i) => !taken.contains(i), orElse: () => 0);
+      }
+      taken.add(f);
+      out[c.id] = familyTones[f];
+    }
+    return out;
+  }
 
   /// 일정 종류별 색. 칸 배경 container, 글자 onContainer, 막대·범례 점 accent.
   final Map<EntryKind, ChildTone> kindTones;
@@ -160,6 +195,29 @@ class AppPalette extends ThemeExtension<AppPalette> {
       // 기타는 무채색: 레몬을 자녀 전용으로 남기려고.
       EntryKind.etc: ChildTone(Color(0xFFEFEFF1), Color(0xFF4A4A50), Color(0xFFA0A0A6), []),
     },
+    // 함께 보기 계열(흰 카드 기준): 옅은 칸 1.2:1·진한 칸 1.5:1, 글자 7.2~9.6:1, 띠 3.4~4.3:1.
+    familyTones: [
+      FamilyTone(
+        ChildTone(Color(0xFFE1EEFE), Color(0xFF093E6F), Color(0xFF2F82D6), []),
+        ChildTone(Color(0xFFB8D9FF), Color(0xFF093E6F), Color(0xFF2F82D6), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFFFEE6E8), Color(0xFF67212F), Color(0xFFC95368), []),
+        ChildTone(Color(0xFFFFC4CA), Color(0xFF67212F), Color(0xFFC95368), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFFDFF3E5), Color(0xFF024A28), Color(0xFF0E9254), []),
+        ChildTone(Color(0xFFAFE5C1), Color(0xFF024A28), Color(0xFF0E9254), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFFF7EBD8), Color(0xFF553A01), Color(0xFFB5820C), []),
+        ChildTone(Color(0xFFF0D19E), Color(0xFF553A01), Color(0xFFB5820C), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFFEFE9FD), Color(0xFF462E69), Color(0xFF8F68CB), []),
+        ChildTone(Color(0xFFDDCCFE), Color(0xFF462E69), Color(0xFF8F68CB), []),
+      ),
+    ],
     canvas: Color(0xFFF1F1EF),
     surface: Color(0xFFFFFFFF),
     surfaceMuted: Color(0xFFF6F6F4),
@@ -200,6 +258,29 @@ class AppPalette extends ThemeExtension<AppPalette> {
       EntryKind.care: ChildTone(Color(0xFF784227), Color(0xFFFFE9DE), Color(0xFFF0986E), []),
       EntryKind.etc: ChildTone(Color(0xFF4C4D50), Color(0xFFEDEEF3), Color(0xFFAEB1B8), []),
     },
+    // 함께 보기 계열(다크 카드 202024 기준): 칸 1.8~2.3:1, 글자 6.2~8.0:1(0.8 투명도 4.6:1 이상).
+    familyTones: [
+      FamilyTone(
+        ChildTone(Color(0xFF374B61), Color(0xFFE6F2FF), Color(0xFF73B5FF), []),
+        ChildTone(Color(0xFF24588F), Color(0xFFE6F2FF), Color(0xFF73B5FF), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFF5F3F42), Color(0xFFFFEAEC), Color(0xFFF78D9B), []),
+        ChildTone(Color(0xFF873A47), Color(0xFFFFEAEC), Color(0xFFF78D9B), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFF35503E), Color(0xFFE1F7E7), Color(0xFF65C98C), []),
+        ChildTone(Color(0xFF12673C), Color(0xFFE1F7E7), Color(0xFF65C98C), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFF5A4A30), Color(0xFFFBEEDA), Color(0xFFDCA744), []),
+        ChildTone(Color(0xFF755203), Color(0xFFFBEEDA), Color(0xFFDCA744), []),
+      ),
+      FamilyTone(
+        ChildTone(Color(0xFF4D445E), Color(0xFFF2EDFE), Color(0xFFBE9DF7), []),
+        ChildTone(Color(0xFF604788), Color(0xFFF2EDFE), Color(0xFFBE9DF7), []),
+      ),
+    ],
     canvas: Color(0xFF111113),
     // 바탕 111113과 카드 1C1C1F가 1.11:1로 카드 경계가 안 보였다 → 조금 밝게.
     surface: Color(0xFF202024),
