@@ -1,70 +1,103 @@
 // 앱 아이콘을 코드로 그려 안드로이드 런처 아이콘 PNG를 만든다(외부 그림 도구·패키지 없이).
 //
-//   flutter test tool/icon/icon_gen_test.dart
+//   flutter test tool/icon/icon_gen_test.dart --plain-name 후보     → tool/icon/candidates.png (후보 비교)
+//   flutter test tool/icon/icon_gen_test.dart --plain-name 런처     → res/mipmap-* (지금 고른 [chosen])
 //
-// 모양: 앱 하단 내비와 같은 검은 바탕 위에 흰 시간표 카드. 머리띠는 파랑(사용자 선택),
-// 칸은 앱 안 색(주황·노랑·민트·보라. 파랑 칸은 머리띠와 겹쳐 주황으로) — 앱 안 색 체계(DESIGN_SYSTEM 2장)를 그대로 쓴다.
-// 좌표는 적응형 아이콘의 108×108 공간. 안전 영역(가운데 지름 66 원) 안에 내용을 둔다.
+// 좌표는 적응형 아이콘의 108×108 공간. 런처는 가운데 72×72만 보여주고(모양 마스크), 안전 영역은 가운데 지름 66 원.
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _background = Color(0xFF151517); // palette.dock
-const _card = Color(0xFFFFFFFF);
-const _header = Color(0xFF3B7DDD); // 파란 계열(사용자 선택)
-const _ring = Color(0xFF151517);
-const _empty = Color(0xFFEFEFF1); // 종류색 기타(빈 칸)
+/// 후보 하나: 바탕(108 전체를 채운다)과 앞 그림. [mono]는 테마 아이콘용 모양만.
+class Design {
+  final String name;
+  final void Function(Canvas c) background;
+  final void Function(Canvas c, {bool mono}) foreground;
+  const Design(this.name, this.background, this.foreground);
+}
 
-/// (열, 시작 줄, 줄 수, 색). 3열 × 3줄 시간표.
-const _blocks = [
-  (0, 0, 2, Color(0xFFF08A5D)),
-  (0, 2, 1, _empty),
-  (1, 0, 1, Color(0xFFD9B23A)),
-  (1, 1, 2, Color(0xFF3FB383)),
-  (2, 0, 1, _empty),
-  (2, 1, 2, Color(0xFF9A7BD8)),
-];
+const _full = Rect.fromLTWH(0, 0, 108, 108);
 
-/// 108 공간의 카드와 칸을 그린다. [mono]면 모양만(테마 아이콘용: 카드는 채우고 칸은 뚫는다).
-void _paintArtwork(Canvas c, {bool mono = false}) {
-  final white = Paint()..color = mono ? Colors.white : _card;
-  const card = Rect.fromLTRB(31, 34, 77, 78);
-  c.saveLayer(const Rect.fromLTWH(0, 0, 108, 108), Paint());
-  c.drawRRect(RRect.fromRectAndRadius(card, const Radius.circular(8)), white);
-  if (!mono) {
-    // 머리띠(위쪽 모서리만 둥글게)
-    c.drawRRect(
-      RRect.fromRectAndCorners(
-        const Rect.fromLTRB(31, 34, 77, 45),
-        topLeft: const Radius.circular(8),
-        topRight: const Radius.circular(8),
-      ),
-      Paint()..color = _header,
-    );
-  }
-  // 칸
-  const left = 35.0, top = 49.0, gap = 2.5, colW = (77 - 4 - left - 2 * gap) / 3, rowH = (78 - 4 - top - 2 * gap) / 3;
-  for (final (col, row, span, color) in _blocks) {
-    final r = Rect.fromLTWH(left + col * (colW + gap), top + row * (rowH + gap), colW, span * rowH + (span - 1) * gap);
-    final paint = mono ? (Paint()..blendMode = BlendMode.clear) : (Paint()..color = color);
-    if (mono && color == _empty) continue; // 빈 칸은 뚫지 않는다(모양이 덜 복잡하게)
-    c.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(2.2)), paint);
+void _gradient(Canvas c, Color a, Color b) =>
+    c.drawRect(_full, Paint()..shader = ui.Gradient.linear(const Offset(18, 18), const Offset(90, 90), [a, b]));
+
+RRect _rr(double l, double t, double r, double b, double radius) =>
+    RRect.fromLTRBR(l, t, r, b, Radius.circular(radius));
+
+// A: 파란 바탕 + 흰 카드 안 "하루 일정" 세 줄(점 + 막대). 오늘 화면의 타임라인을 닮은 꼴.
+final agenda = Design('agenda', (c) => _gradient(c, const Color(0xFF5B9BF0), const Color(0xFF2F62D6)), (
+  c, {
+  mono = false,
+}) {
+  c.saveLayer(_full, Paint());
+  c.drawRRect(_rr(32, 34, 76, 74, 10), Paint()..color = Colors.white);
+  final rows = [(44.0, 26.0, 1.0), (54.0, 18.0, 0.55), (64.0, 22.0, 0.3)];
+  for (final (y, len, a) in rows) {
+    final paint = mono
+        ? (Paint()..blendMode = BlendMode.clear)
+        : (Paint()..color = const Color(0xFF2F62D6).withValues(alpha: a));
+    c.drawCircle(Offset(41, y), 2.6, paint);
+    c.drawRRect(_rr(47, y - 2.6, 47 + len, y + 2.6, 2.6), paint);
   }
   c.restore();
-  // 고리 두 개(카드 위로 살짝 나온 달력 고리)
-  final ring = Paint()..color = mono ? Colors.white : _ring;
-  final ringFill = Paint()..color = mono ? Colors.white : _card;
-  for (final x in [44.0, 64.0]) {
-    final r = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(x, 34), width: 5, height: 11),
-      const Radius.circular(2.5),
-    );
-    if (!mono) c.drawRRect(r.inflate(1.6), ring);
-    c.drawRRect(r, ringFill);
-  }
-}
+});
+
+// B: 파란 바탕 + 흰 선 아이콘(달력 테두리 + 그 안 시계). 선 굵기 하나로 깔끔하게.
+final calendarClock = Design('calendar_clock', (c) => _gradient(c, const Color(0xFF5B9BF0), const Color(0xFF2F62D6)), (
+  c, {
+  mono = false,
+}) {
+  final stroke = Paint()
+    ..color = Colors.white
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.2
+    ..strokeCap = StrokeCap.round;
+  c.drawRRect(_rr(33, 37, 75, 75, 9), stroke);
+  c.drawLine(const Offset(44, 32), const Offset(44, 40), stroke);
+  c.drawLine(const Offset(64, 32), const Offset(64, 40), stroke);
+  const o = Offset(54, 57.5);
+  c.drawCircle(o, 10.5, stroke..strokeWidth = 3.4);
+  c.drawLine(o, o + const Offset(0, -6), stroke);
+  c.drawLine(o, o + const Offset(4.5, 2.5), stroke);
+});
+
+// C: 흰 바탕 + 파란 알약 세 개가 시간 흐름처럼 엇갈려 놓인 꼴(시간표 칸). 지금 쓰는 아이콘(2026-10-24 v0.1.14).
+// 예전 검은 바탕 + 달력 카드 + 색 칸 여섯 개는 "난잡하다"는 피드백으로 바꿨다.
+final steps = Design('steps', (c) => c.drawRect(_full, Paint()..color = const Color(0xFFF4F7FD)), (c, {mono = false}) {
+  Paint p(Color col) => Paint()..color = mono ? Colors.white : col;
+  c.drawRRect(_rr(32, 34, 64, 45, 5.5), p(const Color(0xFF2F62D6)));
+  c.drawRRect(_rr(42, 48.5, 76, 59.5, 5.5), p(const Color(0xFF5B9BF0)));
+  c.drawRRect(_rr(32, 63, 58, 74, 5.5), p(const Color(0xFFA9C8F7)));
+});
+
+// D: 파란 바탕 + 흰 둥근 카드에 파란 시계 바늘 하나. 달력·시계를 한 덩어리로.
+final cardClock = Design('card_clock', (c) => _gradient(c, const Color(0xFF3A74E8), const Color(0xFF1F45B5)), (
+  c, {
+  mono = false,
+}) {
+  c.saveLayer(_full, Paint());
+  c.drawRRect(_rr(33, 33, 75, 75, 12), Paint()..color = Colors.white);
+  final hand = Paint()
+    ..color = const Color(0xFF2F62D6)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.4
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  if (mono) hand.blendMode = BlendMode.clear;
+  final path = Path()
+    ..moveTo(54, 43)
+    ..lineTo(54, 55)
+    ..lineTo(62, 60);
+  c.drawPath(path, hand);
+  c.restore();
+});
+
+final designs = [agenda, calendarClock, steps, cardClock];
+
+/// 지금 쓰는 아이콘.
+final chosen = steps;
 
 Future<void> _save(String path, int size, void Function(Canvas c, double s) paint) async {
   final rec = ui.PictureRecorder();
@@ -77,39 +110,66 @@ Future<void> _save(String path, int size, void Function(Canvas c, double s) pain
     ..writeAsBytesSync(bytes!.buffer.asUint8List());
 }
 
-/// 예전 방식(안드로이드 7 이하·미리보기용) 아이콘: 둥근 검은 사각형 + 그림. 108 공간의 18~90을 꽉 채운다.
-void _legacy(Canvas c, double s) {
-  final m = s * 0.04;
-  c.drawRRect(
-    RRect.fromRectAndRadius(Rect.fromLTRB(m, m, s - m, s - m), Radius.circular(s * 0.22)),
-    Paint()..color = _background,
-  );
+/// 홈 화면에 보이는 모습(가운데 72를 [clip] 모양으로 자른 것). 예전 방식 아이콘과 미리보기에 쓴다.
+void _launcher(Canvas c, double s, Design d, {bool circle = false}) {
+  final box = Rect.fromLTWH(0, 0, s, s);
   c.save();
+  c.clipPath(
+    circle ? (Path()..addOval(box)) : (Path()..addRRect(RRect.fromRectAndRadius(box, Radius.circular(s * 0.23)))),
+  );
   c.scale(s / 72);
   c.translate(-18, -18);
-  _paintArtwork(c);
+  d.background(c);
+  d.foreground(c);
   c.restore();
 }
 
-void _foreground(Canvas c, double s, {bool mono = false}) {
+void _layer(Canvas c, double s, void Function(Canvas c) paint) {
   c.save();
   c.scale(s / 108);
-  _paintArtwork(c, mono: mono);
+  paint(c);
   c.restore();
 }
 
 void main() {
+  testWidgets('후보 미리보기', (tester) async {
+    await tester.runAsync(() async {
+      // 후보마다 세로로: 둥근 사각형(크게) · 원 마스크 · 실제 홈 화면 크기(48)
+      const cell = 240.0;
+      await _save('tool/icon/candidates.png', (cell * designs.length).toInt(), (c, s) {
+        c.drawRect(Rect.fromLTWH(0, 0, s, s), Paint()..color = const Color(0xFF2A2A2E));
+        for (var i = 0; i < designs.length; i++) {
+          void at(double x, double y, void Function() draw) {
+            c.save();
+            c.translate(i * cell + x, y);
+            draw();
+            c.restore();
+          }
+
+          at(20, 20, () => _launcher(c, 200, designs[i]));
+          at(20, 240, () => _launcher(c, 200, designs[i], circle: true));
+          at(96, 470, () => _launcher(c, 48, designs[i]));
+        }
+      });
+    });
+  });
+
   testWidgets('런처 아이콘 PNG 만들기', (tester) async {
     await tester.runAsync(() async {
       const res = 'android/app/src/main/res';
       const legacy = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
       for (final MapEntry(key: d, value: px) in legacy.entries) {
-        await _save('$res/mipmap-$d/ic_launcher.png', px, _legacy);
-        final fg = px * 108 ~/ 48;
-        await _save('$res/mipmap-$d/ic_launcher_foreground.png', fg, _foreground);
-        await _save('$res/mipmap-$d/ic_launcher_monochrome.png', fg, (c, s) => _foreground(c, s, mono: true));
+        await _save('$res/mipmap-$d/ic_launcher.png', px, (c, s) => _launcher(c, s, chosen));
+        final layer = px * 108 ~/ 48;
+        await _save('$res/mipmap-$d/ic_launcher_background.png', layer, (c, s) => _layer(c, s, chosen.background));
+        await _save('$res/mipmap-$d/ic_launcher_foreground.png', layer, (c, s) => _layer(c, s, chosen.foreground));
+        await _save(
+          '$res/mipmap-$d/ic_launcher_monochrome.png',
+          layer,
+          (c, s) => _layer(c, s, (c) => chosen.foreground(c, mono: true)),
+        );
       }
-      await _save('tool/icon/icon_preview.png', 512, _legacy);
+      await _save('tool/icon/icon_preview.png', 512, (c, s) => _launcher(c, s, chosen));
     });
   });
 }
