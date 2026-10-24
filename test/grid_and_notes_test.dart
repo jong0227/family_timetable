@@ -76,6 +76,13 @@ void main() {
       expect(f['b'], same(p.familyTones[1]));
     });
 
+    test('한 아이 안에서도 종류마다 색이 다르다(같은 계열)', () {
+      for (final fam in [...AppPalette.light.familyTones, ...AppPalette.dark.familyTones]) {
+        final colors = {for (final k in EntryKind.values) fam.kind(k).container};
+        expect(colors, hasLength(EntryKind.values.length));
+      }
+    });
+
     test('같은 계열을 고른 두 아이도 서로 다른 계열로 갈린다', () {
       final f = p.familiesFor([kid('a', 2), kid('b', 5)]); // 하늘·라벤더 = 둘 다 파랑
       expect(f['a'], same(p.familyTones[0]));

@@ -68,7 +68,15 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
                         spacing: AppGap.md,
                         runSpacing: AppGap.xs,
                         children: [
-                          for (final c in widget.children) _FamilyLegend(child: c, color: families[c.id]!.accent),
+                          for (final c in widget.children)
+                            _FamilyLegend(
+                              child: c,
+                              family: families[c.id]!,
+                              kinds: {
+                                for (final e in entries)
+                                  if (owner[e.id]!.$1.id == c.id) e.kind,
+                              },
+                            ),
                         ],
                       ),
                     ),
@@ -93,10 +101,7 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
                     zoom: zoom,
                     onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
                     groupOf: (e) => owner[e.id]!.$1.id,
-                    toneOf: (e) {
-                      final f = families[owner[e.id]!.$1.id]!;
-                      return e.kind == EntryKind.school ? f.soft : f.strong;
-                    },
+                    toneOf: (e) => families[owner[e.id]!.$1.id]!.kind(e.kind),
                     stripeOf: (e) => families[owner[e.id]!.$1.id]!.accent,
                     onTapEntry: (e) => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -111,26 +116,50 @@ class _FamilyBoardState extends ConsumerState<FamilyBoard> {
   }
 }
 
-/// 범례 한 칸: 계열색 띠 + 아이 이름. 칸 왼쪽 띠와 같은 모양이라 읽는 법이 바로 보인다.
+/// 범례 한 줄: 아이 이름(계열 띠) + 그 아이가 가진 종류들(계열 안 색). "서원 ■학교 ■학원 ■기타".
 class _FamilyLegend extends StatelessWidget {
   final Child child;
-  final Color color;
-  const _FamilyLegend({required this.child, required this.color});
+  final FamilyTone family;
+  final Set<EntryKind> kinds;
+  const _FamilyLegend({required this.child, required this.family, required this.kinds});
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
-      ),
-      const SizedBox(width: AppGap.snug),
-      Text(
-        child.name,
-        style: const TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w700),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    Widget swatch(Color c, double size) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
+    );
+    return Wrap(
+      spacing: AppGap.sm,
+      runSpacing: AppGap.xxs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            swatch(family.accent, 12),
+            const SizedBox(width: AppGap.snug),
+            Text(
+              child.name,
+              style: const TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        for (final k in EntryKind.values.where(kinds.contains))
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              swatch(family.kind(k).container, 10),
+              const SizedBox(width: AppGap.xs),
+              Text(
+                k.label,
+                style: TextStyle(fontSize: AppText.caption, color: p.textMuted),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
 }

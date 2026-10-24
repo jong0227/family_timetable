@@ -73,16 +73,19 @@ class ChildTone {
   const ChildTone(this.container, this.onContainer, this.accent, this.gradient);
 }
 
-/// 함께 보기에서 아이 한 명이 쓰는 색 계열(파랑·빨강·초록·호박·보라). 학교는 옅게([soft]), 나머지는 진하게([strong]).
-/// 글자색·강조색은 두 단계가 같다. 아이 구분이 먼저, 종류 구분은 그다음(디자인 점검 2026-10-24).
+/// 함께 보기에서 아이 한 명이 쓰는 색 계열(파랑·빨강·초록·호박·보라).
+///
+/// 계열 안에서 일정 종류마다 색을 조금씩 바꾼다(실사용 피드백: 한 아이 일정이 다 같은 파랑이라 학교·학원·기타가
+/// 구분이 안 됐다). 계열 색상에서 ±40° 안에서만 돌려(파랑 계열 = 남색·보라빛 파랑·청록) 아이 구분이 먼저 보이고,
+/// 학교는 옅게(오래 있어 배경처럼), 기타는 거의 무채색, 학원은 가장 진하게. 글자는 칸과 4.5:1 이상(0.8 투명도 포함).
 @immutable
 class FamilyTone {
-  final ChildTone soft;
-  final ChildTone strong;
-  const FamilyTone(this.soft, this.strong);
+  /// 칸 왼쪽 띠·아이 이름 옆 색
+  final Color accent;
+  final Map<EntryKind, ChildTone> kinds;
+  const FamilyTone(this.accent, this.kinds);
 
-  /// 칸 왼쪽 띠·범례 점
-  Color get accent => strong.accent;
+  ChildTone kind(EntryKind k) => kinds[k] ?? kinds[EntryKind.etc]!;
 }
 
 @immutable
@@ -195,28 +198,53 @@ class AppPalette extends ThemeExtension<AppPalette> {
       // 기타는 무채색: 레몬을 자녀 전용으로 남기려고.
       EntryKind.etc: ChildTone(Color(0xFFEFEFF1), Color(0xFF4A4A50), Color(0xFFA0A0A6), []),
     },
-    // 함께 보기 계열(흰 카드 기준): 옅은 칸 1.2:1·진한 칸 1.5:1, 글자 7.2~9.6:1, 띠 3.4~4.3:1.
+    // 함께 보기 계열(흰 카드 기준): 칸 1.2~1.6:1, 글자 7.2~9.9:1(0.8 투명도 4.6:1 이상).
     familyTones: [
-      FamilyTone(
-        ChildTone(Color(0xFFE1EEFE), Color(0xFF093E6F), Color(0xFF2F82D6), []),
-        ChildTone(Color(0xFFB8D9FF), Color(0xFF093E6F), Color(0xFF2F82D6), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFFFEE6E8), Color(0xFF67212F), Color(0xFFC95368), []),
-        ChildTone(Color(0xFFFFC4CA), Color(0xFF67212F), Color(0xFFC95368), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFFDFF3E5), Color(0xFF024A28), Color(0xFF0E9254), []),
-        ChildTone(Color(0xFFAFE5C1), Color(0xFF024A28), Color(0xFF0E9254), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFFF7EBD8), Color(0xFF553A01), Color(0xFFB5820C), []),
-        ChildTone(Color(0xFFF0D19E), Color(0xFF553A01), Color(0xFFB5820C), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFFEFE9FD), Color(0xFF462E69), Color(0xFF8F68CB), []),
-        ChildTone(Color(0xFFDDCCFE), Color(0xFF462E69), Color(0xFF8F68CB), []),
-      ),
+      // blue
+      FamilyTone(Color(0xFF2F82D6), {
+        EntryKind.school: ChildTone(Color(0xFFE1EEFE), Color(0xFF0F3C67), Color(0xFF3E89D7), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFFD6CFFF), Color(0xFF3C3065), Color(0xFF8974D3), []),
+        EntryKind.academy: ChildTone(Color(0xFFABD2FE), Color(0xFF0F3C67), Color(0xFF3E89D7), []),
+        EntryKind.activity: ChildTone(Color(0xFF98E6F6), Color(0xFF02424D), Color(0xFF0097AC), []),
+        EntryKind.care: ChildTone(Color(0xFFC5E9FF), Color(0xFF02405A), Color(0xFF0991C7), []),
+        EntryKind.etc: ChildTone(Color(0xFFDCE2E9), Color(0xFF0F3C67), Color(0xFF3E89D7), []),
+      }),
+      // red
+      FamilyTone(Color(0xFFC95465), {
+        EntryKind.school: ChildTone(Color(0xFFFEE6E7), Color(0xFF61232C), Color(0xFFCC5E6C), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFFFEC9A7), Color(0xFF5C2B00), Color(0xFFC56B23), []),
+        EntryKind.academy: ChildTone(Color(0xFFFEB9BE), Color(0xFF61232C), Color(0xFFCC5E6C), []),
+        EntryKind.activity: ChildTone(Color(0xFFF9C4EE), Color(0xFF56264E), Color(0xFFB763A9), []),
+        EntryKind.care: ChildTone(Color(0xFFFFD6E4), Color(0xFF5D233C), Color(0xFFC65E89), []),
+        EntryKind.etc: ChildTone(Color(0xFFE9DEDF), Color(0xFF61232C), Color(0xFFCC5E6C), []),
+      }),
+      // green
+      FamilyTone(Color(0xFF029957), {
+        EntryKind.school: ChildTone(Color(0xFFDFF3E5), Color(0xFF014726), Color(0xFF269E5F), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF95E7E6), Color(0xFF044444), Color(0xFF0C9999), []),
+        EntryKind.academy: ChildTone(Color(0xFF9BE1B3), Color(0xFF014726), Color(0xFF269E5F), []),
+        EntryKind.activity: ChildTone(Color(0xFFD5DEA2), Color(0xFF3A3F02), Color(0xFF848F02), []),
+        EntryKind.care: ChildTone(Color(0xFFD1EDC6), Color(0xFF224510), Color(0xFF5B993E), []),
+        EntryKind.etc: ChildTone(Color(0xFFDBE4DE), Color(0xFF014726), Color(0xFF269E5F), []),
+      }),
+      // amber
+      FamilyTone(Color(0xFFAB7302), {
+        EntryKind.school: ChildTone(Color(0xFFF8EBD9), Color(0xFF513400), Color(0xFFB37903), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFFD4DDA0), Color(0xFF3A3F02), Color(0xFF848F02), []),
+        EntryKind.academy: ChildTone(Color(0xFFF3C586), Color(0xFF513400), Color(0xFFB37903), []),
+        EntryKind.activity: ChildTone(Color(0xFFFFC9BB), Color(0xFF612517), Color(0xFFCC6349), []),
+        EntryKind.care: ChildTone(Color(0xFFFFDBC2), Color(0xFF5A2D01), Color(0xFFC46D1B), []),
+        EntryKind.etc: ChildTone(Color(0xFFE6E0D9), Color(0xFF513400), Color(0xFFB37903), []),
+      }),
+      // violet
+      FamilyTone(Color(0xFF8F68CB), {
+        EntryKind.school: ChildTone(Color(0xFFEFE9FD), Color(0xFF422E62), Color(0xFF9470CD), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFFFBC2E7), Color(0xFF582549), Color(0xFFBC61A0), []),
+        EntryKind.academy: ChildTone(Color(0xFFD6C1FF), Color(0xFF422E62), Color(0xFF9470CD), []),
+        EntryKind.activity: ChildTone(Color(0xFFC2D9FF), Color(0xFF1D3969), Color(0xFF5285D9), []),
+        EntryKind.care: ChildTone(Color(0xFFDEE0FE), Color(0xFF343368), Color(0xFF7A79D7), []),
+        EntryKind.etc: ChildTone(Color(0xFFE2E0E8), Color(0xFF422E62), Color(0xFF9470CD), []),
+      }),
     ],
     canvas: Color(0xFFF1F1EF),
     surface: Color(0xFFFFFFFF),
@@ -258,28 +286,53 @@ class AppPalette extends ThemeExtension<AppPalette> {
       EntryKind.care: ChildTone(Color(0xFF784227), Color(0xFFFFE9DE), Color(0xFFF0986E), []),
       EntryKind.etc: ChildTone(Color(0xFF4C4D50), Color(0xFFEDEEF3), Color(0xFFAEB1B8), []),
     },
-    // 함께 보기 계열(다크 카드 202024 기준): 칸 1.8~2.3:1, 글자 6.2~8.0:1(0.8 투명도 4.6:1 이상).
+    // 함께 보기 계열(다크 카드 202024 기준): 칸 1.4~2.4:1, 글자 6.4~10.7:1(0.8 투명도 4.5:1 이상).
     familyTones: [
-      FamilyTone(
-        ChildTone(Color(0xFF374B61), Color(0xFFE6F2FF), Color(0xFF73B5FF), []),
-        ChildTone(Color(0xFF24588F), Color(0xFFE6F2FF), Color(0xFF73B5FF), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFF5F3F42), Color(0xFFFFEAEC), Color(0xFFF78D9B), []),
-        ChildTone(Color(0xFF873A47), Color(0xFFFFEAEC), Color(0xFFF78D9B), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFF35503E), Color(0xFFE1F7E7), Color(0xFF65C98C), []),
-        ChildTone(Color(0xFF12673C), Color(0xFFE1F7E7), Color(0xFF65C98C), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFF5A4A30), Color(0xFFFBEEDA), Color(0xFFDCA744), []),
-        ChildTone(Color(0xFF755203), Color(0xFFFBEEDA), Color(0xFFDCA744), []),
-      ),
-      FamilyTone(
-        ChildTone(Color(0xFF4D445E), Color(0xFFF2EDFE), Color(0xFFBE9DF7), []),
-        ChildTone(Color(0xFF604788), Color(0xFFF2EDFE), Color(0xFFBE9DF7), []),
-      ),
+      // blue
+      FamilyTone(Color(0xFF73B5FF), {
+        EntryKind.school: ChildTone(Color(0xFF37485C), Color(0xFFF1F8FF), Color(0xFF73B5FF), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF544785), Color(0xFFF7F5FE), Color(0xFFB3A1FD), []),
+        EntryKind.academy: ChildTone(Color(0xFF215D99), Color(0xFFF1F8FF), Color(0xFF73B5FF), []),
+        EntryKind.activity: ChildTone(Color(0xFF05606E), Color(0xFFE8FBFF), Color(0xFF15C6E1), []),
+        EntryKind.care: ChildTone(Color(0xFF2D607B), Color(0xFFEEF9FF), Color(0xFF4CBEF7), []),
+        EntryKind.etc: ChildTone(Color(0xFF353A3F), Color(0xFFF1F8FF), Color(0xFF73B5FF), []),
+      }),
+      // red
+      FamilyTone(Color(0xFFF88D98), {
+        EntryKind.school: ChildTone(Color(0xFF5A3E40), Color(0xFFFFF4F4), Color(0xFFF88D98), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF7C4111), Color(0xFFFFF5EE), Color(0xFFF1995D), []),
+        EntryKind.academy: ChildTone(Color(0xFF903B47), Color(0xFFFFF4F4), Color(0xFFF88D98), []),
+        EntryKind.activity: ChildTone(Color(0xFF743F6B), Color(0xFFFFF3FC), Color(0xFFE391D3), []),
+        EntryKind.care: ChildTone(Color(0xFF79485B), Color(0xFFFEF4F7), Color(0xFFF28DB4), []),
+        EntryKind.etc: ChildTone(Color(0xFF3F3737), Color(0xFFFFF4F4), Color(0xFFF88D98), []),
+      }),
+      // green
+      FamilyTone(Color(0xFF65C98C), {
+        EntryKind.school: ChildTone(Color(0xFF354D3D), Color(0xFFEDFBF1), Color(0xFF65C98C), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF045F5F), Color(0xFFE8FBFB), Color(0xFF10CACA), []),
+        EntryKind.academy: ChildTone(Color(0xFF036D3D), Color(0xFFEDFBF1), Color(0xFF65C98C), []),
+        EntryKind.activity: ChildTone(Color(0xFF545B0F), Color(0xFFF6F9EA), Color(0xFFAFBB52), []),
+        EntryKind.care: ChildTone(Color(0xFF46633B), Color(0xFFF1FAED), Color(0xFF89C470), []),
+        EntryKind.etc: ChildTone(Color(0xFF353B36), Color(0xFFEDFBF1), Color(0xFF65C98C), []),
+      }),
+      // amber
+      FamilyTone(Color(0xFFE1A447), {
+        EntryKind.school: ChildTone(Color(0xFF53432E), Color(0xFFFFF5E8), Color(0xFFE1A447), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF515803), Color(0xFFF6F9EA), Color(0xFFAFBB52), []),
+        EntryKind.academy: ChildTone(Color(0xFF7B5100), Color(0xFFFFF5E8), Color(0xFFE1A447), []),
+        EntryKind.activity: ChildTone(Color(0xFF813F2F), Color(0xFFFFF4F1), Color(0xFFF89177), []),
+        EntryKind.care: ChildTone(Color(0xFF774F31), Color(0xFFFFF5EE), Color(0xFFEF9A59), []),
+        EntryKind.etc: ChildTone(Color(0xFF3D3832), Color(0xFFFFF5E8), Color(0xFFE1A447), []),
+      }),
+      // violet
+      FamilyTone(Color(0xFFBE9DF7), {
+        EntryKind.school: ChildTone(Color(0xFF494259), Color(0xFFF8F5FE), Color(0xFFBE9DF7), []),
+        EntryKind.afterSchool: ChildTone(Color(0xFF763A64), Color(0xFFFFF3FA), Color(0xFFE88FCB), []),
+        EntryKind.academy: ChildTone(Color(0xFF654991), Color(0xFFF8F5FE), Color(0xFFBE9DF7), []),
+        EntryKind.activity: ChildTone(Color(0xFF35558A), Color(0xFFF3F7FE), Color(0xFF83B2FE), []),
+        EntryKind.care: ChildTone(Color(0xFF535480), Color(0xFFF5F6FF), Color(0xFFA5A7FF), []),
+        EntryKind.etc: ChildTone(Color(0xFF3A383F), Color(0xFFF8F5FE), Color(0xFFBE9DF7), []),
+      }),
     ],
     canvas: Color(0xFF111113),
     // 바탕 111113과 카드 1C1C1F가 1.11:1로 카드 경계가 안 보였다 → 조금 밝게.
