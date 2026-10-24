@@ -1,5 +1,6 @@
 import 'package:family_timetable/app/bootstrap.dart';
 import 'package:family_timetable/core/design/app_theme.dart';
+import 'package:family_timetable/core/design/components/navigation.dart';
 import 'package:family_timetable/core/design/palette.dart';
 import 'package:family_timetable/data/family_store.dart';
 import 'package:family_timetable/data/timetable_repository.dart';
@@ -60,5 +61,13 @@ void main() {
     expect(find.text('함께 보기 · 아이 2명'), findsOneWidget);
     expect(find.text('피아노'), findsOneWidget);
     expect(find.text('수영'), findsOneWidget);
+
+    // 좁은 폰(폴드 겉화면 정도)에서도 아이 탭 + 추가 한 줄, 카드 머리 한 줄이 넘치지 않는다.
+    await tester.tap(find.descendant(of: find.byType(PillTabs<String>), matching: find.text('첫째')));
+    await tester.pumpAndSettle();
+    tester.view.physicalSize = const Size(330, 1400);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('학교 교시'), findsOneWidget);
   });
 }

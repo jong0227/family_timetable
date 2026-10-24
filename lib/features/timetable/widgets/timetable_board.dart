@@ -18,10 +18,13 @@ class TimetableBoard extends ConsumerStatefulWidget {
   final Child child;
   final TimetableVersion version;
 
-  /// 버튼 줄 끝에 붙일 것(시간표 탭의 "수정 기록" 단추). 지난 버전 화면은 앱바에 따로 있어 안 준다.
-  final Widget? trailing;
+  /// "+ 추가" 줄 왼쪽에 놓을 것(시간표 탭의 아이 탭).
+  final Widget? leading;
 
-  const TimetableBoard({super.key, required this.child, required this.version, this.trailing});
+  /// 카드 머리 오른쪽 끝(시간표 탭의 "수정 기록" 단추). 지난 버전 화면은 앱바에 따로 있어 안 준다.
+  final Widget? headerAction;
+
+  const TimetableBoard({super.key, required this.child, required this.version, this.leading, this.headerAction});
 
   @override
   ConsumerState<TimetableBoard> createState() => _TimetableBoardState();
@@ -56,112 +59,142 @@ class _TimetableBoardState extends ConsumerState<TimetableBoard> {
     final isTimeScale = mode == WeekViewMode.timeScale;
     final canPeriods = canEdit && widget.child.institution.hasPeriods && !v.isVacation;
 
+    // 한 줄 = [아이 탭 ……… + 추가]. 일정 추가·교시 입력 큰 버튼 두 개가 한 줄을 따로 차지하던 걸
+    // "+ 추가" 하나로 합쳤다(누르면 둘 중 고른다). 빈칸 없이 줄을 줄여 달라는 실사용 피드백.
+    final addButton = canEdit
+        ? FilledButton.icon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: AppGap.lg),
+            ),
+            onPressed: () =>
+                canPeriods ? _pickAdd(context, v) : showEntryEditor(context, child: widget.child, version: v),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('추가'),
+          )
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (canEdit || widget.trailing != null) ...[
+        if (widget.leading != null || addButton != null) ...[
           Row(
             children: [
-              if (canEdit)
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () => showEntryEditor(context, child: widget.child, version: v),
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    label: const Text('일정 추가'),
-                  ),
-                ),
-              if (canPeriods) ...[
-                const SizedBox(width: AppGap.sm),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => showSchoolWeekSheet(context, child: widget.child, version: v),
-                    icon: const Icon(Icons.grid_view_rounded, size: 18),
-                    label: const Text('교시 입력'),
-                  ),
-                ),
-              ],
-              if (widget.trailing != null) ...[
-                if (canEdit) const SizedBox(width: AppGap.sm) else const Spacer(),
-                widget.trailing!,
-              ],
+              Expanded(
+                child: Align(alignment: Alignment.centerLeft, child: widget.leading ?? const SizedBox.shrink()),
+              ),
+              if (addButton != null) ...[const SizedBox(width: AppGap.sm), addButton],
             ],
           ),
           const SizedBox(height: AppGap.md),
         ],
         DashCard(
-          icon: Icons.calendar_view_week_rounded,
-          title: '주간 시간표 · 일정 ${v.entries.length}개',
-          linkLabel: showWeekend ? '주말 숨기기' : '주말 보기',
-          onLink: () => setState(() => _showWeekendOverride = !showWeekend),
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-          child: v.entries.isEmpty
-              ? EmptyState(
-                  emoji: '🗓️',
-                  title: '아직 일정이 없어요',
-                  message: canEdit
-                      ? (canPeriods ? '학교 시간표는 "교시 입력"으로, 학원은 "일정 추가"로 넣어 보세요.' : '"일정 추가"로 등원·하원 시간부터 넣어 보세요.')
-                      : null,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        PillTabs<WeekViewMode>(
-                          items: [for (final m in WeekViewMode.values) (m, m.label, null)],
-                          selected: mode,
-                          onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
-                        ),
-                        const Spacer(),
-                        // 켜짐/꺼짐이 체크로 보이는 칩. 켜면 교시가 다 보이고, 끄면(기본) 학교 시간이 한 칸으로 접힌다.
-                        // 예전 "학교 펼치기" 단추로는 어딜 눌러야 교시가 보이는지 몰랐다(실사용 피드백).
-                        // 학교 다니는 아이면 교시가 아직 없어도 칩을 둔다. 교시가 있을 때만 보였더니, 교시를 안 넣은
-                        // 시간표에선 "교시 보기가 어딨냐"는 질문이 나왔다(실사용). 없으면 누를 때 교시 입력으로 안내.
-                        if (isTimeScale && (hasSchoolPeriods || widget.child.institution.hasPeriods))
-                          ToggleChip(
-                            label: '학교 교시',
-                            selected: hasSchoolPeriods && !foldSchool,
-                            onChanged: (_) {
-                              if (hasSchoolPeriods) {
-                                ref.read(foldSchoolProvider.notifier).toggle();
-                                return;
-                              }
-                              if (canPeriods) {
-                                showToast(context, '아직 교시가 없어요. 요일별 교시를 넣어 주세요');
-                                showSchoolWeekSheet(context, child: widget.child, version: v);
-                              } else {
-                                showToast(context, '이 시간표엔 아직 교시가 없어요');
-                              }
-                            },
-                          ),
-                      ],
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 카드 머리 = 보기 방식 + 학교 교시 + 수정 기록. 예전엔 "주간 시간표 · 일정 N개" 제목 줄이 따로 있었다.
+              Row(
+                children: [
+                  // 좁은 폰에선 보기 탭이 줄어들며 옆으로 밀린다(칩·단추는 그대로).
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: PillTabs<WeekViewMode>(
+                        items: [for (final m in WeekViewMode.values) (m, m.label, null)],
+                        selected: mode,
+                        onChanged: (m) => ref.read(weekViewModeProvider.notifier).set(m),
+                      ),
                     ),
-                    const SizedBox(height: AppGap.md),
-                    if (isTimeScale)
-                      // 두 손가락으로 벌리면 세로로 늘고 오므리면 줄어든다(이 폰에 기억).
-                      PinchZoom(
-                        zoom: zoom,
-                        onZoom: (z) => ref.read(timeScaleZoomProvider.notifier).preview(z),
-                        onZoomEnd: () => ref.read(timeScaleZoomProvider.notifier).commit(),
-                        child: TimeScaleGrid(
-                          entries: v.entries,
-                          weekdays: weekdays,
-                          onTapEntry: onTapEntry,
-                          onTapDay: onTapDay,
-                          commentCounts: commentCounts,
-                          foldSchool: foldSchool,
-                          zoom: zoom,
-                          onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
-                        ),
-                      )
-                    else
-                      WeekGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay),
-                    const SizedBox(height: AppGap.md),
-                    KindLegend(entries: v.entries),
-                  ],
-                ),
+                  ),
+                  // 학교 다니는 아이면 교시가 아직 없어도 칩을 둔다(없으면 누를 때 교시 입력으로 안내).
+                  // 교시가 있을 때만 보였더니 "교시 보기가 어딨냐"는 질문이 나왔다(실사용).
+                  if (isTimeScale && (hasSchoolPeriods || widget.child.institution.hasPeriods))
+                    ToggleChip(
+                      label: '학교 교시',
+                      selected: hasSchoolPeriods && !foldSchool,
+                      onChanged: (_) {
+                        if (hasSchoolPeriods) {
+                          ref.read(foldSchoolProvider.notifier).toggle();
+                        } else if (canPeriods) {
+                          showToast(context, '아직 교시가 없어요. 요일별 교시를 넣어 주세요');
+                          showSchoolWeekSheet(context, child: widget.child, version: v);
+                        } else {
+                          showToast(context, '이 시간표엔 아직 교시가 없어요');
+                        }
+                      },
+                    ),
+                  ?widget.headerAction,
+                ],
+              ),
+              const SizedBox(height: AppGap.md),
+              if (v.entries.isEmpty)
+                EmptyState(emoji: '🗓️', title: '아직 일정이 없어요', message: canEdit ? '"+ 추가"로 학교 교시나 학원 일정을 넣어 보세요.' : null)
+              else if (isTimeScale)
+                // 두 손가락으로 벌리면 세로로 늘고 오므리면 줄어든다(이 폰에 기억).
+                PinchZoom(
+                  zoom: zoom,
+                  onZoom: (z) => ref.read(timeScaleZoomProvider.notifier).preview(z),
+                  onZoomEnd: () => ref.read(timeScaleZoomProvider.notifier).commit(),
+                  child: TimeScaleGrid(
+                    entries: v.entries,
+                    weekdays: weekdays,
+                    onTapEntry: onTapEntry,
+                    onTapDay: onTapDay,
+                    commentCounts: commentCounts,
+                    foldSchool: foldSchool,
+                    zoom: zoom,
+                    onToggleSchool: () => ref.read(foldSchoolProvider.notifier).toggle(),
+                  ),
+                )
+              else
+                WeekGrid(entries: v.entries, weekdays: weekdays, onTapEntry: onTapEntry, onTapDay: onTapDay),
+              // 바닥 줄 = 범례 + 주말 보기/숨기기(제목 줄에 있던 것).
+              Row(
+                children: [
+                  Expanded(child: KindLegend(entries: v.entries)),
+                  TextButton(
+                    onPressed: () => setState(() => _showWeekendOverride = !showWeekend),
+                    child: Text(showWeekend ? '주말 숨기기' : '주말 보기'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  /// "+ 추가": 일정 하나 넣기 / 요일별 교시 넣기 중 고른다.
+  Future<void> _pickAdd(BuildContext context, TimetableVersion v) async {
+    final pick = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_rounded),
+              title: const Text('일정 추가'),
+              subtitle: const Text('학원·방과후·늘봄 같은 일정 하나'),
+              onTap: () => Navigator.pop(ctx, 0),
+            ),
+            ListTile(
+              leading: const Icon(Icons.grid_view_rounded),
+              title: const Text('교시 입력'),
+              subtitle: const Text('요일별 학교 교시를 한 번에'),
+              onTap: () => Navigator.pop(ctx, 1),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted || pick == null) return;
+    if (pick == 0) {
+      await showEntryEditor(context, child: widget.child, version: v);
+    } else {
+      await showSchoolWeekSheet(context, child: widget.child, version: v);
+    }
   }
 }

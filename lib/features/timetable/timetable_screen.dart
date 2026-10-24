@@ -82,25 +82,36 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                   onTap: () => open(VersionsScreen(childId: child.id)),
                 ),
         ),
-        if (children.length > 1) ...[
-          PillTabs<String>(
-            items: [for (final c in children) (c.id, c.name, p.child(c.colorIndex).accent), (_together, '함께', null)],
-            selected: child.id,
-            onChanged: (id) => setState(() => _childId = id),
-          ),
-          const SizedBox(height: AppGap.lg),
-        ],
         if (version != null)
           TimetableBoard(
             child: child,
             version: version,
-            trailing: IconButton.outlined(
+            // 아이 탭은 "+ 추가"와 한 줄에, 수정 기록은 카드 머리에(줄을 줄여 달라는 실사용 피드백).
+            leading: children.length > 1
+                ? PillTabs<String>(
+                    items: [
+                      for (final c in children) (c.id, c.name, p.child(c.colorIndex).accent),
+                      (_together, '함께', null),
+                    ],
+                    selected: child.id,
+                    onChanged: (id) => setState(() => _childId = id),
+                  )
+                : null,
+            headerAction: IconButton(
               tooltip: '수정 기록',
               icon: const Icon(Icons.history_rounded),
               onPressed: () => open(RevisionsScreen(versionId: version.id)),
             ),
           )
-        else
+        else ...[
+          if (children.length > 1) ...[
+            PillTabs<String>(
+              items: [for (final c in children) (c.id, c.name, p.child(c.colorIndex).accent), (_together, '함께', null)],
+              selected: child.id,
+              onChanged: (id) => setState(() => _childId = id),
+            ),
+            const SizedBox(height: AppGap.lg),
+          ],
           DashCard(
             child: EmptyState(
               emoji: '📒',
@@ -110,6 +121,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               onAction: () => showNewVersionDialog(context, ref, child: child),
             ),
           ),
+        ],
       ],
     );
   }
